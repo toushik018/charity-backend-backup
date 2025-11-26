@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { AuthRoute } from '../app/modules/auth/auth.route';
+import { FundraiserRoute } from '../app/modules/fundraiser/fundraiser.route';
 import { UploadRoute } from '../app/modules/upload/upload.route';
 import { UserRoutes } from '../app/modules/user/user.route';
 
@@ -17,6 +18,10 @@ const moduleRoutes = [
   {
     path: '/upload',
     route: UploadRoute,
+  },
+  {
+    path: '/fundraisers',
+    route: FundraiserRoute,
   },
 ];
 

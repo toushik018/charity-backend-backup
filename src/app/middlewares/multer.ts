@@ -23,7 +23,7 @@ const cloudinaryStorage = new CloudinaryStorage({
       .toLowerCase();
 
     return {
-      folder: 'aromiq-bd',
+      folder: 'fundsus',
       resource_type: 'image',
       public_id: `${Date.now()}-${baseName}`,
       transformation: [

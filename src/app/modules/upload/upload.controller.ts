@@ -43,7 +43,7 @@ const uploadBase64Image = catchAsync(async (req: Request, res: Response) => {
   try {
     // Upload base64 image to Cloudinary
     const result = await cloudinary.uploader.upload(image, {
-      folder: 'fundsus/profile-pictures',
+      folder: 'fundsus',
       transformation: [
         {
           width: 500,
