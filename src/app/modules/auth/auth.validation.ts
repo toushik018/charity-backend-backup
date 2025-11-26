@@ -51,6 +51,11 @@ const loginValidationSchema = z.object({
 
 const updateProfileValidationSchema = z.object({
   body: z.object({
+    name: z
+      .string()
+      .min(1, 'Name cannot be empty')
+      .max(100, 'Name cannot exceed 100 characters')
+      .optional(),
     firstName: z
       .string()
       .min(1, 'First name cannot be empty')
@@ -62,6 +67,7 @@ const updateProfileValidationSchema = z.object({
       .max(50, 'Last name cannot exceed 50 characters')
       .optional(),
     profilePicture: z.string().url('Invalid profile picture URL').optional(),
+    coverImage: z.string().url('Invalid cover image URL').optional(),
     bio: z.string().max(500, 'Bio cannot exceed 500 characters').optional(),
     website: z
       .string()

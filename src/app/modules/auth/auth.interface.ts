@@ -83,9 +83,11 @@ export interface IChangePasswordRequest {
 }
 
 export interface IUserUpdateRequest {
+  name?: string;
   firstName?: string;
   lastName?: string;
   profilePicture?: string;
+  coverImage?: string;
   bio?: string;
   website?: string;
   location?: string;

@@ -378,13 +378,19 @@ const updateUserProfile = async (
     }
 
     // Update user fields
+    if (payload.name) user.name = payload.name;
+
+    // Also support firstName/lastName updates if provided
     const nextName = [payload.firstName, payload.lastName]
       .filter(Boolean)
       .join(' ')
       .trim();
     if (nextName) user.name = nextName;
 
-    // No preferences/profile fields on shared user model; skip
+    if (payload.bio !== undefined) user.bio = payload.bio;
+    if (payload.profilePicture !== undefined)
+      user.profilePicture = payload.profilePicture;
+    if (payload.coverImage !== undefined) user.coverImage = payload.coverImage;
 
     await user.save();
     return user;

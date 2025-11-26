@@ -21,6 +21,9 @@ export type TUser = {
   superPassword?: string;
   role?: TUserRole;
   profile?: TProfile;
+  profilePicture?: string;
+  bio?: string;
+  coverImage?: string;
   isActive?: boolean;
   createdAt?: Date;
   updatedAt?: Date;

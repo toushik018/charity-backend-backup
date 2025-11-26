@@ -6,6 +6,9 @@ import { TUser } from './user.interface';
 export interface IUserDocument extends TUser, Document {
   _id: Types.ObjectId;
   username?: string;
+  profilePicture?: string;
+  bio?: string;
+  coverImage?: string;
 }
 
 export interface IUserModel extends Model<IUserDocument> {
@@ -71,7 +74,9 @@ const userSchema = new Schema<IUserDocument, IUserModel>(
       default: 'user',
     },
     profile: { type: profileSchema },
-
+    profilePicture: { type: String, trim: true },
+    bio: { type: String, trim: true, maxlength: 500 },
+    coverImage: { type: String, trim: true },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }

@@ -28,18 +28,18 @@ router.post('/auto-refresh', AuthController.refreshToken);
 router.get('/verify-token', auth('admin'), AuthController.verifyToken);
 
 // Protected routes
-router.get('/profile', auth('admin'), AuthController.getProfile);
+router.get('/profile', auth('admin', 'user'), AuthController.getProfile);
 
 router.patch(
   '/profile',
-  auth('admin'),
+  auth('admin', 'user'),
   validateRequest(AuthValidation.updateProfileValidationSchema),
   AuthController.updateProfile
 );
 
 router.patch(
   '/change-password',
-  auth('admin'),
+  auth('admin', 'user'),
   validateRequest(AuthValidation.changePasswordValidationSchema),
   AuthController.changePassword
 );
