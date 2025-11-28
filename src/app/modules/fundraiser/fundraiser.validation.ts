@@ -16,6 +16,11 @@ export const createFundraiserValidation = z.object({
     currency: z.string().min(1).max(10).optional(),
     category: z.string().min(1).max(100).optional(),
     story: z.string().max(10000).optional(),
+    country: z.string().min(1).max(100).optional(),
+    zipCode: z.string().min(1).max(20).optional(),
+    beneficiaryType: z.enum(['yourself', 'someone_else', 'charity']).optional(),
+    automatedGoal: z.boolean().optional(),
+    longTermNeed: z.enum(['YES', 'NO']).optional(),
   }),
 });
 
@@ -29,6 +34,11 @@ export const updateFundraiserValidation = z.object({
     currency: z.string().min(1).max(10).optional(),
     category: z.string().min(1).max(100).optional(),
     story: z.string().max(10000).optional(),
+    country: z.string().min(1).max(100).optional(),
+    zipCode: z.string().min(1).max(20).optional(),
+    beneficiaryType: z.enum(['yourself', 'someone_else', 'charity']).optional(),
+    automatedGoal: z.boolean().optional(),
+    longTermNeed: z.enum(['YES', 'NO']).optional(),
   }),
 });
 

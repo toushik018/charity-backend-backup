@@ -48,6 +48,11 @@ const createDraft = async (
     currency: payload.currency,
     category: payload.category,
     story: payload.story,
+    country: payload.country,
+    zipCode: payload.zipCode,
+    beneficiaryType: payload.beneficiaryType,
+    automatedGoal: payload.automatedGoal,
+    longTermNeed: payload.longTermNeed,
   });
   return doc;
 };
@@ -68,6 +73,14 @@ const updateFundraiser = async (
   if (payload.currency !== undefined) doc.currency = payload.currency;
   if (payload.category !== undefined) doc.category = payload.category;
   if (payload.story !== undefined) doc.story = payload.story;
+  if (payload.country !== undefined) doc.country = payload.country;
+  if (payload.zipCode !== undefined) doc.zipCode = payload.zipCode;
+  if (payload.beneficiaryType !== undefined)
+    doc.beneficiaryType = payload.beneficiaryType;
+  if (payload.automatedGoal !== undefined)
+    doc.automatedGoal = payload.automatedGoal;
+  if (payload.longTermNeed !== undefined)
+    doc.longTermNeed = payload.longTermNeed;
 
   if (doc.status === 'draft' && willUpdateTitle) {
     const baseSlug = slugify(doc.title);

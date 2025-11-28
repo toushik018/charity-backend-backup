@@ -24,6 +24,14 @@ const fundraiserSchema = new Schema<IFundraiser>(
     currency: { type: String, trim: true },
     category: { type: String, trim: true },
     story: { type: String, trim: true },
+    country: { type: String, trim: true },
+    zipCode: { type: String, trim: true },
+    beneficiaryType: {
+      type: String,
+      enum: ['yourself', 'someone_else', 'charity'],
+    },
+    automatedGoal: { type: Boolean, default: true },
+    longTermNeed: { type: String, enum: ['YES', 'NO'] },
     publishedAt: { type: Date, default: null },
   },
   { timestamps: true }
