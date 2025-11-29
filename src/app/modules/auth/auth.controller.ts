@@ -24,6 +24,32 @@ const registerUser = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const socialLogin = catchAsync(async (req: Request, res: Response) => {
+  const result = await AuthService.socialLogin(req.body);
+  const { refreshToken, accessToken, user, expiresAt } = result;
+
+  // Set refresh token as httpOnly cookie (same options as login)
+  res.cookie('refreshToken', refreshToken, {
+    secure: config.NODE_ENV === 'production',
+    httpOnly: true,
+    domain: config.cookie_domain || 'localhost',
+    sameSite: config.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+  });
+
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: AUTH_MESSAGES.LOGIN_SUCCESS,
+    data: {
+      accessToken,
+      refreshToken,
+      expiresAt,
+      user,
+    },
+  });
+});
+
 const loginUser = catchAsync(async (req: Request, res: Response) => {
   const result = await AuthService.loginUser(req.body);
   const { refreshToken, accessToken, user, expiresAt } = result;
@@ -159,6 +185,7 @@ const changePassword = catchAsync(async (req: AuthRequest, res: Response) => {
 export const AuthController = {
   registerUser,
   loginUser,
+  socialLogin,
   logoutUser,
   refreshToken,
   verifyToken,

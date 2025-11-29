@@ -124,10 +124,21 @@ const socialAccountValidationSchema = z.object({
   }),
 });
 
+const socialLoginValidationSchema = z.object({
+  body: z.object({
+    email: z
+      .string({ required_error: 'Email is required' })
+      .email('Invalid email'),
+    name: z.string().optional(),
+    image: z.string().url().optional(),
+  }),
+});
+
 export const AuthValidation = {
   registerValidationSchema,
   loginValidationSchema,
   updateProfileValidationSchema,
   changePasswordValidationSchema,
   socialAccountValidationSchema,
+  socialLoginValidationSchema,
 };

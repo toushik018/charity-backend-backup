@@ -42,6 +42,78 @@ const parseDurationToMs = (duration: string): number => {
       return 24 * 60 * 60 * 1000;
   }
 };
+
+// Social login (e.g., Google) – find-or-create user by email and issue tokens
+const socialLogin = async (payload: {
+  email: string;
+  name?: string;
+  image?: string;
+}): Promise<IAuthResponse> => {
+  try {
+    const email = payload.email.toLowerCase();
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      // Create user with a random strong password (not used, but required by schema)
+      const randomPassword = `G${Math.random().toString(36).slice(-10)}!aA1`;
+      user = await User.create({
+        email,
+        password: randomPassword,
+        name: payload.name?.trim() || email,
+        isActive: true,
+        role: 'user',
+        profilePicture: payload.image,
+      });
+    }
+
+    if (!user.isActive) {
+      throw new AppError(
+        StatusCodes.FORBIDDEN,
+        AUTH_MESSAGES.ACCOUNT_DEACTIVATED
+      );
+    }
+
+    // Generate tokens
+    const userRoleForToken = mapRoleToAuthRole(user.role);
+    const jwtPayload: IJWTPayload = {
+      userId: String(user._id),
+      email: user.email,
+      role: userRoleForToken,
+    };
+
+    const accessToken = createToken(
+      jwtPayload,
+      config.jwt_access_secret as string,
+      ACCESS_TOKEN_EXPIRES_IN
+    );
+
+    const refreshToken = createToken(
+      jwtPayload,
+      config.jwt_refresh_secret as string,
+      REFRESH_TOKEN_EXPIRES_IN
+    );
+
+    await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
+
+    const expiresAt = Date.now() + ACCESS_TOKEN_TTL_MS;
+
+    return {
+      user: buildAuthUser(user),
+      accessToken,
+      refreshToken,
+      expiresAt,
+    };
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+    throw new AppError(
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      (error as Error)?.message || 'Failed to sign in with provider'
+    );
+  }
+};
 const ACCESS_TOKEN_TTL_MS = parseDurationToMs(ACCESS_TOKEN_EXPIRES_IN);
 
 const mapRoleToAuthRole = (role?: TUserRole): 'user' | 'admin' =>
@@ -467,6 +539,7 @@ export const AuthService = {
   loginUser,
   logoutUser,
   refreshToken,
+  socialLogin,
   getUserProfile,
   updateUserProfile,
   changePassword,

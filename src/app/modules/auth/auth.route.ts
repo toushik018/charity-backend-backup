@@ -18,6 +18,12 @@ router.post(
   AuthController.loginUser
 );
 
+router.post(
+  '/social-login',
+  validateRequest(AuthValidation.socialLoginValidationSchema),
+  AuthController.socialLogin
+);
+
 router.post('/logout', AuthController.logoutUser);
 router.post('/refresh-token', AuthController.refreshToken);
 
