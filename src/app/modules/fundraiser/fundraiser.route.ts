@@ -1,6 +1,11 @@
 import { Router } from 'express';
 import auth from '../../middlewares/auth';
 import { validateRequest } from '../../middlewares/validateRequest';
+import { FundraiserReactionController } from '../reaction/fundraiser.reaction.controller';
+import {
+  getMyReactionsQueryValidation,
+  reactToFundraiserValidation,
+} from '../reaction/fundraiser.reaction.validation';
 import { FundraiserController } from './fundraiser.controller';
 import {
   adminCreateFundraiserValidation,
@@ -94,6 +99,34 @@ router.delete(
   auth('admin'),
   validateRequest(getByIdParamValidation),
   FundraiserController.adminDelete
+);
+
+// Reactions
+router.post(
+  '/:id/reactions',
+  auth('admin', 'user'),
+  validateRequest(reactToFundraiserValidation),
+  FundraiserReactionController.reactToFundraiser
+);
+
+router.delete(
+  '/:id/reactions',
+  auth('admin', 'user'),
+  validateRequest(getByIdParamValidation),
+  FundraiserReactionController.removeMyReaction
+);
+
+router.get(
+  '/:id/reactions',
+  validateRequest(getByIdParamValidation),
+  FundraiserReactionController.getFundraiserReactions
+);
+
+router.get(
+  '/reactions/mine',
+  auth('admin', 'user'),
+  validateRequest(getMyReactionsQueryValidation),
+  FundraiserReactionController.getMyReactions
 );
 
 export const FundraiserRoute = router;
