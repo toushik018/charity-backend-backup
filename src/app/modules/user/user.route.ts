@@ -39,6 +39,9 @@ router.patch(
   validateRequest(updateHighlightsValidation),
   UserController.updateMyHighlights
 );
+router.get('/discover', auth('admin', 'user'), UserController.discoverUsers);
+router.get('/browse', auth('admin', 'user'), UserController.browseUsers);
+
 router.get(
   '/:userId',
   auth('admin', 'user'),

@@ -6,10 +6,12 @@ import { sendResponse } from '../../utils/sendResponse';
 import { AuthRequest } from '../auth/auth.interface';
 import { TUserRole } from './user.interface';
 import {
+  browseUsersFromDB,
   createUserInDB,
   deleteUserFromDB,
   followUserInDB,
   getAllUsersFromDB,
+  getDiscoverUsers,
   getFollowersFromDB,
   getFollowingFromDB,
   getUserByIdFromDB,
@@ -139,7 +141,18 @@ export const updateMe = catchAsync(async (req: AuthRequest, res: Response) => {
   const userId = requester.userId;
   const payload = req.body as Partial<{
     name: string;
-    profile: { phone?: string; address?: string; avatar?: string };
+    profile: {
+      phone?: string;
+      address?: string;
+      avatar?: string;
+      socials?: {
+        facebook?: string;
+        twitter?: string;
+        instagram?: string;
+        linkedin?: string;
+        website?: string;
+      };
+    };
   }>;
 
   // Only allow limited fields
@@ -155,6 +168,9 @@ export const updateMe = catchAsync(async (req: AuthRequest, res: Response) => {
         : {}),
       ...(typeof payload.profile.avatar === 'string'
         ? { avatar: payload.profile.avatar }
+        : {}),
+      ...(payload.profile.socials && typeof payload.profile.socials === 'object'
+        ? { socials: payload.profile.socials }
         : {}),
     };
   }
@@ -308,4 +324,37 @@ export const UserController = {
   getFollowers,
   getFollowing,
   updateMyHighlights,
+  discoverUsers: catchAsync(async (req: AuthRequest, res: Response) => {
+    const requester = req.user;
+    const limitParam = (req.query?.limit as string) || '';
+    const limit = Number(limitParam) || 10;
+    const data = await getDiscoverUsers(
+      requester ? requester.userId : null,
+      limit
+    );
+    sendResponse(res, {
+      statusCode: StatusCodes.OK,
+      success: true,
+      message: 'Users discovered successfully',
+      data,
+    });
+  }),
+  browseUsers: catchAsync(async (req: AuthRequest, res: Response) => {
+    const requester = req.user;
+    const page = (req.query?.page ? Number(req.query.page as string) : 1) || 1;
+    const limit =
+      (req.query?.limit ? Number(req.query.limit as string) : 20) || 20;
+    const result = await browseUsersFromDB(
+      requester ? requester.userId : null,
+      page,
+      limit
+    );
+    sendResponse(res, {
+      statusCode: StatusCodes.OK,
+      success: true,
+      message: 'Users retrieved successfully',
+      meta: result.meta,
+      data: result.data,
+    });
+  }),
 };

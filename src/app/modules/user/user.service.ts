@@ -1,5 +1,5 @@
 import { StatusCodes } from 'http-status-codes';
-import { FilterQuery } from 'mongoose';
+import { FilterQuery, PipelineStage } from 'mongoose';
 import config from '../../config';
 import AppError from '../../error/AppError';
 import { Fundraiser } from '../fundraiser/fundraiser.model';
@@ -150,15 +150,23 @@ export const updateUserInDB = async (
       user.email = payload.email.toLowerCase();
     if (payload.role !== undefined) user.role = payload.role as TUserRole;
 
-    // Profile update: accept either an object or a string for address.
+    // Profile update: accept either an object or a string for address, and merge socials.
     if (payload.profile) {
-      const { phone, address } = payload.profile as Record<string, unknown>;
+      const { phone, address, avatar, socials } = payload.profile as Record<
+        string,
+        unknown
+      >;
 
       const profileUpdate: Partial<TProfile> = { ...(user.profile || {}) };
 
       if (typeof phone === 'string') {
         const p = phone.trim();
         if (p) profileUpdate.phone = p;
+      }
+
+      if (typeof avatar === 'string') {
+        const a = avatar.trim();
+        if (a) profileUpdate.avatar = a;
       }
 
       if (typeof address === 'string') {
@@ -175,6 +183,13 @@ export const updateUserInDB = async (
           ...(user.profile?.address || {}),
           ...(address as Record<string, unknown>),
         } as Partial<import('./user.interface').TAddress>;
+      }
+
+      if (socials && typeof socials === 'object') {
+        profileUpdate.socials = {
+          ...(user.profile?.socials || {}),
+          ...(socials as Record<string, string>),
+        };
       }
 
       user.profile = {
@@ -333,4 +348,109 @@ export const updateHighlightsInDB = async (
 
   const updated = await user.save();
   return updated;
+};
+
+export const getDiscoverUsers = async (
+  requesterId: string | null,
+  limit: number
+) => {
+  try {
+    const size = Math.max(1, Math.min(limit || 10, 50));
+
+    const pipeline: PipelineStage[] = [
+      { $match: { isActive: true, role: 'user' } },
+      { $sample: { size } },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          profilePicture: 1,
+          'profile.avatar': 1,
+          followers: 1,
+        },
+      },
+    ];
+
+    const users = (await User.aggregate(pipeline)) as Array<{
+      _id: unknown;
+      name?: string;
+      profilePicture?: string;
+      profile?: { avatar?: string } | null;
+      followers?: unknown[];
+    }>;
+
+    const reqId = requesterId ? String(requesterId) : null;
+
+    const data = users.map((u) => ({
+      _id: u._id,
+      name: u.name || '',
+      avatar: u.profilePicture || u.profile?.avatar || '',
+      isFollowing: reqId
+        ? (u.followers || []).some((id) => String(id) === reqId)
+        : false,
+    }));
+
+    return data;
+  } catch (error) {
+    throw new AppError(
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      (error as Error)?.message || 'Failed to discover users'
+    );
+  }
+};
+
+export const browseUsersFromDB = async (
+  requesterId: string | null,
+  page: number,
+  limit: number
+) => {
+  try {
+    const p = Math.max(1, page || 1);
+    const l = Math.max(1, Math.min(limit || 20, 50));
+    const skip = (p - 1) * l;
+
+    type SimpleUser = {
+      _id: unknown;
+      name?: string;
+      profilePicture?: string;
+      profile?: { avatar?: string } | null;
+      followers?: unknown[];
+    };
+
+    const [users, total] = await Promise.all([
+      User.find({ isActive: true, role: 'user' })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(l)
+        .select('name profilePicture profile followers')
+        .lean({ virtuals: true }) as unknown as Promise<SimpleUser[]>,
+      User.countDocuments({ isActive: true, role: 'user' }),
+    ]);
+
+    const reqId = requesterId ? String(requesterId) : null;
+
+    const data = users.map((u) => ({
+      _id: u._id,
+      name: u.name || '',
+      avatar: u.profilePicture || u.profile?.avatar || '',
+      isFollowing: reqId
+        ? (u.followers || []).some((id) => String(id) === reqId)
+        : false,
+    }));
+
+    return {
+      meta: {
+        page: p,
+        limit: l,
+        total,
+        totalPages: Math.ceil(total / l),
+      },
+      data,
+    };
+  } catch (error) {
+    throw new AppError(
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      (error as Error)?.message || 'Failed to browse users'
+    );
+  }
 };
