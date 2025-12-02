@@ -35,6 +35,13 @@ const profileSchema = new Schema(
     phone: { type: String, trim: true },
     avatar: { type: String, trim: true },
     address: { type: addressSchema },
+    socials: {
+      facebook: { type: String, trim: true },
+      twitter: { type: String, trim: true },
+      instagram: { type: String, trim: true },
+      linkedin: { type: String, trim: true },
+      website: { type: String, trim: true },
+    },
   },
   { _id: false }
 );
@@ -78,6 +85,24 @@ const userSchema = new Schema<IUserDocument, IUserModel>(
     bio: { type: String, trim: true, maxlength: 500 },
     coverImage: { type: String, trim: true },
     isActive: { type: Boolean, default: true },
+    followers: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
+    following: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
+    pinnedFundraisers: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'Fundraiser',
+      },
+    ],
   },
   { timestamps: true }
 );
@@ -119,6 +144,9 @@ userSchema.set('toJSON', commonToJSONTransforms);
 userSchema.set('toObject', commonToJSONTransforms);
 
 userSchema.index({ role: 1, isActive: 1 });
+userSchema.index({ followers: 1 });
+userSchema.index({ following: 1 });
+userSchema.index({ pinnedFundraisers: 1 });
 
 // Virtual username from email
 userSchema.virtual('username').get(function () {

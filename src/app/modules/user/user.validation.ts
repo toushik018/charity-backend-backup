@@ -11,6 +11,16 @@ export const updateUserValidation = z.object({
           phone: z.string().optional(),
           address: z.string().optional(),
           avatar: z.string().url().optional(),
+          socials: z
+            .object({
+              facebook: z.string().url().optional(),
+              twitter: z.string().url().optional(),
+              instagram: z.string().url().optional(),
+              linkedin: z.string().url().optional(),
+              website: z.string().url().optional(),
+            })
+            .partial()
+            .optional(),
         })
         .optional(),
     })
@@ -78,6 +88,16 @@ export const updateMeValidation = z.object({
           phone: z.string().optional(),
           address: z.string().optional(),
           avatar: z.string().url().optional(),
+          socials: z
+            .object({
+              facebook: z.string().url().optional(),
+              twitter: z.string().url().optional(),
+              instagram: z.string().url().optional(),
+              linkedin: z.string().url().optional(),
+              website: z.string().url().optional(),
+            })
+            .partial()
+            .optional(),
         })
         .optional(),
     })
@@ -99,7 +119,26 @@ export const createUserValidation = z.object({
         phone: z.string().optional(),
         address: z.string().optional(),
         avatar: z.string().url().optional(),
+        socials: z
+          .object({
+            facebook: z.string().url().optional(),
+            twitter: z.string().url().optional(),
+            instagram: z.string().url().optional(),
+            linkedin: z.string().url().optional(),
+            website: z.string().url().optional(),
+          })
+          .partial()
+          .optional(),
       })
+      .optional(),
+  }),
+});
+
+export const updateHighlightsValidation = z.object({
+  body: z.object({
+    fundraiserIds: z
+      .array(z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid fundraiser id'))
+      .max(10)
       .optional(),
   }),
 });

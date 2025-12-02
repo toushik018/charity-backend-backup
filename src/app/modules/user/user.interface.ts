@@ -1,3 +1,5 @@
+import type { Types } from 'mongoose';
+
 export type TUserRole = 'user' | 'admin';
 
 export type TAddress = {
@@ -12,6 +14,13 @@ export type TProfile = {
   phone?: string;
   avatar?: string;
   address?: TAddress;
+  socials?: {
+    facebook?: string;
+    twitter?: string;
+    instagram?: string;
+    linkedin?: string;
+    website?: string;
+  };
 };
 
 export type TUser = {
@@ -27,4 +36,7 @@ export type TUser = {
   isActive?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
+  followers?: Types.ObjectId[];
+  following?: Types.ObjectId[];
+  pinnedFundraisers?: Types.ObjectId[];
 };

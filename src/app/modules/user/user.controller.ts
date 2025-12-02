@@ -8,8 +8,13 @@ import { TUserRole } from './user.interface';
 import {
   createUserInDB,
   deleteUserFromDB,
+  followUserInDB,
   getAllUsersFromDB,
+  getFollowersFromDB,
+  getFollowingFromDB,
   getUserByIdFromDB,
+  unfollowUserInDB,
+  updateHighlightsInDB,
   updateUserInDB,
 } from './user.service';
 import { TUserFilters } from './user.utils';
@@ -190,6 +195,107 @@ export const deleteUser = catchAsync(
   }
 );
 
+const followUser = catchAsync(async (req: AuthRequest, res: Response) => {
+  const requester = req.user;
+
+  if (!requester) {
+    throw new AppError(
+      StatusCodes.UNAUTHORIZED,
+      'Authenticated user is required'
+    );
+  }
+
+  const { userId } = req.params;
+  const result = await followUserInDB(requester.userId, userId);
+
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'User followed successfully',
+    data: {
+      followerId: result.follower._id,
+      targetUserId: result.target._id,
+    },
+  });
+});
+
+const unfollowUser = catchAsync(async (req: AuthRequest, res: Response) => {
+  const requester = req.user;
+
+  if (!requester) {
+    throw new AppError(
+      StatusCodes.UNAUTHORIZED,
+      'Authenticated user is required'
+    );
+  }
+
+  const { userId } = req.params;
+  const result = await unfollowUserInDB(requester.userId, userId);
+
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'User unfollowed successfully',
+    data: {
+      followerId: result.follower._id,
+      targetUserId: result.target._id,
+    },
+  });
+});
+
+const getFollowers = catchAsync(async (req: AuthRequest, res: Response) => {
+  const { userId } = req.params;
+  const followers = await getFollowersFromDB(userId);
+
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Followers retrieved successfully',
+    data: followers,
+  });
+});
+
+const getFollowing = catchAsync(async (req: AuthRequest, res: Response) => {
+  const { userId } = req.params;
+  const following = await getFollowingFromDB(userId);
+
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Following retrieved successfully',
+    data: following,
+  });
+});
+
+const updateMyHighlights = catchAsync(
+  async (req: AuthRequest, res: Response) => {
+    const requester = req.user;
+
+    if (!requester) {
+      throw new AppError(
+        StatusCodes.UNAUTHORIZED,
+        'Authenticated user is required'
+      );
+    }
+
+    const { fundraiserIds } = req.body as {
+      fundraiserIds?: string[];
+    };
+
+    const updatedUser = await updateHighlightsInDB(
+      requester.userId,
+      fundraiserIds || []
+    );
+
+    sendResponse(res, {
+      statusCode: StatusCodes.OK,
+      success: true,
+      message: 'Highlights updated successfully',
+      data: updatedUser.pinnedFundraisers || [],
+    });
+  }
+);
+
 export const UserController = {
   getAllUsers,
   getSingleUser,
@@ -197,4 +303,9 @@ export const UserController = {
   updateMe,
   deleteUser,
   createUser,
+  followUser,
+  unfollowUser,
+  getFollowers,
+  getFollowing,
+  updateMyHighlights,
 };

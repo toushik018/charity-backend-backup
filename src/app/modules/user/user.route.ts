@@ -6,6 +6,7 @@ import {
   createUserValidation,
   getUserByIdParamValidation,
   getUsersQueryValidation,
+  updateHighlightsValidation,
   updateMeValidation,
   updateUserValidation,
 } from './user.validation';
@@ -32,6 +33,12 @@ router.patch(
   validateRequest(updateMeValidation),
   UserController.updateMe
 );
+router.patch(
+  '/me/highlights',
+  auth('admin', 'user'),
+  validateRequest(updateHighlightsValidation),
+  UserController.updateMyHighlights
+);
 router.get(
   '/:userId',
   auth('admin', 'user'),
@@ -49,6 +56,32 @@ router.delete(
   auth('admin'),
   validateRequest(getUserByIdParamValidation),
   UserController.deleteUser
+);
+
+router.post(
+  '/:userId/follow',
+  auth('admin', 'user'),
+  validateRequest(getUserByIdParamValidation),
+  UserController.followUser
+);
+
+router.post(
+  '/:userId/unfollow',
+  auth('admin', 'user'),
+  validateRequest(getUserByIdParamValidation),
+  UserController.unfollowUser
+);
+
+router.get(
+  '/:userId/followers',
+  validateRequest(getUserByIdParamValidation),
+  UserController.getFollowers
+);
+
+router.get(
+  '/:userId/following',
+  validateRequest(getUserByIdParamValidation),
+  UserController.getFollowing
 );
 
 export const UserRoutes = router;

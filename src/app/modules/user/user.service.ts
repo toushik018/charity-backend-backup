@@ -2,6 +2,7 @@ import { StatusCodes } from 'http-status-codes';
 import { FilterQuery } from 'mongoose';
 import config from '../../config';
 import AppError from '../../error/AppError';
+import { Fundraiser } from '../fundraiser/fundraiser.model';
 import { TProfile, TUser, TUserRole } from './user.interface';
 import { IUserDocument, User } from './user.model';
 import { TUserFilters, buildUserQuery } from './user.utils';
@@ -214,4 +215,122 @@ export const deleteUserFromDB = async (userId: string) => {
       (error as Error)?.message || 'Failed to delete user'
     );
   }
+};
+
+export const followUserInDB = async (
+  followerId: string,
+  targetUserId: string
+) => {
+  if (followerId === targetUserId) {
+    throw new AppError(StatusCodes.BAD_REQUEST, 'You cannot follow yourself');
+  }
+
+  const [follower, target] = await Promise.all([
+    User.findById(followerId),
+    User.findById(targetUserId),
+  ]);
+
+  if (!follower || !target) {
+    throw new AppError(StatusCodes.NOT_FOUND, 'User not found');
+  }
+
+  const followerObjectId = follower._id;
+  const targetObjectId = target._id;
+
+  const isAlreadyFollowing = target.followers?.some((id) =>
+    id.equals(followerObjectId)
+  );
+
+  if (isAlreadyFollowing) {
+    return { follower, target };
+  }
+
+  follower.following = [...(follower.following || []), targetObjectId];
+  target.followers = [...(target.followers || []), followerObjectId];
+
+  await Promise.all([follower.save(), target.save()]);
+
+  return { follower, target };
+};
+
+export const unfollowUserInDB = async (
+  followerId: string,
+  targetUserId: string
+) => {
+  if (followerId === targetUserId) {
+    throw new AppError(StatusCodes.BAD_REQUEST, 'You cannot unfollow yourself');
+  }
+
+  const [follower, target] = await Promise.all([
+    User.findById(followerId),
+    User.findById(targetUserId),
+  ]);
+
+  if (!follower || !target) {
+    throw new AppError(StatusCodes.NOT_FOUND, 'User not found');
+  }
+
+  const followerObjectId = follower._id;
+  const targetObjectId = target._id;
+
+  follower.following = (follower.following || []).filter(
+    (id) => !id.equals(targetObjectId)
+  );
+  target.followers = (target.followers || []).filter(
+    (id) => !id.equals(followerObjectId)
+  );
+
+  await Promise.all([follower.save(), target.save()]);
+
+  return { follower, target };
+};
+
+export const getFollowersFromDB = async (userId: string) => {
+  const user = await User.findById(userId)
+    .populate('followers')
+    .lean({ virtuals: true });
+  if (!user) {
+    throw new AppError(StatusCodes.NOT_FOUND, 'User not found');
+  }
+  return user.followers || [];
+};
+
+export const getFollowingFromDB = async (userId: string) => {
+  const user = await User.findById(userId)
+    .populate('following')
+    .lean({ virtuals: true });
+  if (!user) {
+    throw new AppError(StatusCodes.NOT_FOUND, 'User not found');
+  }
+  return user.following || [];
+};
+
+export const updateHighlightsInDB = async (
+  userId: string,
+  fundraiserIds: string[]
+) => {
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new AppError(StatusCodes.NOT_FOUND, 'User not found');
+  }
+
+  if (!fundraiserIds || fundraiserIds.length === 0) {
+    user.pinnedFundraisers = [];
+    const updated = await user.save();
+    return updated;
+  }
+
+  const uniqueIds = Array.from(new Set(fundraiserIds));
+
+  const fundraisers = await Fundraiser.find({
+    _id: { $in: uniqueIds },
+    owner: userId,
+    status: 'published',
+  }).select('_id');
+
+  const validIds = fundraisers.map((f) => f._id);
+  user.pinnedFundraisers = validIds;
+
+  const updated = await user.save();
+  return updated;
 };
