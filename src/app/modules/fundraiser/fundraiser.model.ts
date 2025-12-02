@@ -30,6 +30,18 @@ const fundraiserSchema = new Schema<IFundraiser>(
       type: String,
       enum: ['yourself', 'someone_else', 'charity'],
     },
+    nonprofit: {
+      type: {
+        id: { type: String, trim: true },
+        name: { type: String, trim: true },
+        logo: { type: String, trim: true },
+        category: { type: String, trim: true },
+        location: { type: String, trim: true },
+        ein: { type: String, trim: true },
+        verified: { type: Boolean, default: false },
+      },
+      default: null,
+    },
     automatedGoal: { type: Boolean, default: true },
     longTermNeed: { type: String, enum: ['YES', 'NO'] },
     publishedAt: { type: Date, default: null },

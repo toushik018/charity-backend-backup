@@ -41,15 +41,14 @@ const uploadBase64Image = catchAsync(async (req: Request, res: Response) => {
   }
 
   try {
-    // Upload base64 image to Cloudinary
+    // Upload base64 image to Cloudinary, preserve aspect ratio
     const result = await cloudinary.uploader.upload(image, {
       folder: 'fundsus',
+      resource_type: 'image',
       transformation: [
         {
-          width: 500,
-          height: 500,
-          crop: 'fill',
-          gravity: 'face',
+          width: 1920,
+          crop: 'limit',
           quality: 'auto',
           fetch_format: 'auto',
         },

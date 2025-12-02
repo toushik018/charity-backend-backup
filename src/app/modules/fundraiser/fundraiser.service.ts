@@ -38,6 +38,7 @@ const createDraft = async (
     country: payload.country,
     zipCode: payload.zipCode,
     beneficiaryType: payload.beneficiaryType,
+    nonprofit: payload.nonprofit ?? null,
     automatedGoal: payload.automatedGoal,
     longTermNeed: payload.longTermNeed,
   });
@@ -64,6 +65,7 @@ const updateFundraiser = async (
   if (payload.zipCode !== undefined) doc.zipCode = payload.zipCode;
   if (payload.beneficiaryType !== undefined)
     doc.beneficiaryType = payload.beneficiaryType;
+  if (payload.nonprofit !== undefined) doc.nonprofit = payload.nonprofit;
   if (payload.automatedGoal !== undefined)
     doc.automatedGoal = payload.automatedGoal;
   if (payload.longTermNeed !== undefined)

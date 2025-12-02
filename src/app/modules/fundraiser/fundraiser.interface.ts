@@ -18,6 +18,15 @@ export interface IFundraiser extends Document {
   country?: string;
   zipCode?: string;
   beneficiaryType?: 'yourself' | 'someone_else' | 'charity';
+  nonprofit?: {
+    id?: string;
+    name?: string;
+    logo?: string;
+    category?: string;
+    location?: string;
+    ein?: string;
+    verified?: boolean;
+  } | null;
   automatedGoal?: boolean;
   longTermNeed?: 'YES' | 'NO';
   publishedAt?: Date | null;
@@ -36,6 +45,15 @@ export interface IFundraiserCreateRequest {
   country?: string;
   zipCode?: string;
   beneficiaryType?: 'yourself' | 'someone_else' | 'charity';
+  nonprofit?: {
+    id?: string;
+    name?: string;
+    logo?: string;
+    category?: string;
+    location?: string;
+    ein?: string;
+    verified?: boolean;
+  } | null;
   automatedGoal?: boolean;
   longTermNeed?: 'YES' | 'NO';
 }
@@ -51,6 +69,15 @@ export interface IFundraiserUpdateRequest {
   country?: string;
   zipCode?: string;
   beneficiaryType?: 'yourself' | 'someone_else' | 'charity';
+  nonprofit?: {
+    id?: string;
+    name?: string;
+    logo?: string;
+    category?: string;
+    location?: string;
+    ein?: string;
+    verified?: boolean;
+  } | null;
   automatedGoal?: boolean;
   longTermNeed?: 'YES' | 'NO';
 }
