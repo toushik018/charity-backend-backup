@@ -1,33 +1,20 @@
 import { StatusCodes } from 'http-status-codes';
-import { Types } from 'mongoose';
+import { FilterQuery } from 'mongoose';
 import AppError from '../../error/AppError';
+import type { TListOptions } from '../user/user.service';
 import {
   IFundraiser,
   IFundraiserCreateRequest,
   IFundraiserUpdateRequest,
 } from './fundraiser.interface';
 import { Fundraiser } from './fundraiser.model';
-
-const toObjectId = (id: string) => new Types.ObjectId(id);
-
-const slugify = (text: string) =>
-  text
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-
-const ensureUniqueSlug = async (base: string): Promise<string> => {
-  const normalized = base || 'fundraiser';
-  let attempt = 0;
-  let candidate = normalized;
-  for (;;) {
-    const exists = await Fundraiser.exists({ slug: candidate });
-    if (!exists) return candidate;
-    attempt += 1;
-    candidate = `${normalized}-${attempt}`;
-  }
-};
+import {
+  buildFundraiserQuery,
+  ensureUniqueSlug,
+  slugify,
+  TFundraiserFilters,
+  toObjectId,
+} from './fundraiser.utils';
 
 const createDraft = async (
   ownerId: string,
@@ -128,10 +115,146 @@ const getBySlug = async (
   return null;
 };
 
+const getAllFundraisers = async (
+  filters: TFundraiserFilters,
+  options: TListOptions
+) => {
+  const {
+    page = 1,
+    limit = 10,
+    sortBy = 'createdAt',
+    sortOrder = 'desc',
+  } = options || {};
+
+  const query: FilterQuery<IFundraiser> = buildFundraiserQuery(filters);
+
+  const skip = (page - 1) * limit;
+  const sort: Record<string, 1 | -1> = {
+    [String(sortBy)]: sortOrder === 'asc' ? 1 : -1,
+  };
+
+  const [data, total] = await Promise.all([
+    Fundraiser.find(query)
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .lean({ virtuals: true }),
+    Fundraiser.countDocuments(query),
+  ]);
+
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+    data,
+  };
+};
+
+const getPublicFundraisers = async (
+  filters: Omit<TFundraiserFilters, 'status'>,
+  options: TListOptions
+) => {
+  const {
+    page = 1,
+    limit = 10,
+    sortBy = 'publishedAt',
+    sortOrder = 'desc',
+  } = options || {};
+
+  const query: FilterQuery<IFundraiser> = buildFundraiserQuery({
+    ...filters,
+    status: 'published',
+  } as TFundraiserFilters);
+  query.status = 'published';
+
+  const skip = (page - 1) * limit;
+  const sort: Record<string, 1 | -1> = {
+    [String(sortBy)]: sortOrder === 'asc' ? 1 : -1,
+  };
+
+  const [data, total] = await Promise.all([
+    Fundraiser.find(query)
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .lean({ virtuals: true }),
+    Fundraiser.countDocuments(query),
+  ]);
+
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+    data,
+  };
+};
+
+const adminCreateFundraiser = async (
+  ownerId: string,
+  payload: IFundraiserCreateRequest
+): Promise<IFundraiser> => {
+  return createDraft(ownerId, payload);
+};
+
+const adminUpdateFundraiser = async (
+  id: string,
+  payload: IFundraiserUpdateRequest
+): Promise<IFundraiser> => {
+  const doc = await Fundraiser.findById(id);
+  if (!doc) throw new AppError(StatusCodes.NOT_FOUND, 'Fundraiser not found');
+
+  const willUpdateTitle = payload.title && payload.title.trim() !== doc.title;
+  if (payload.title) doc.title = payload.title.trim();
+  if (payload.coverImage !== undefined) doc.coverImage = payload.coverImage;
+  if (payload.gallery !== undefined) doc.gallery = payload.gallery;
+  if (payload.goalAmount !== undefined) doc.goalAmount = payload.goalAmount;
+  if (payload.currency !== undefined) doc.currency = payload.currency;
+  if (payload.category !== undefined) doc.category = payload.category;
+  if (payload.story !== undefined) doc.story = payload.story;
+  if (payload.country !== undefined) doc.country = payload.country;
+  if (payload.zipCode !== undefined) doc.zipCode = payload.zipCode;
+  if (payload.beneficiaryType !== undefined)
+    doc.beneficiaryType = payload.beneficiaryType;
+  if (payload.automatedGoal !== undefined)
+    doc.automatedGoal = payload.automatedGoal;
+  if (payload.longTermNeed !== undefined)
+    doc.longTermNeed = payload.longTermNeed;
+
+  if (doc.status === 'draft' && willUpdateTitle) {
+    const baseSlug = slugify(doc.title);
+    doc.slug = await ensureUniqueSlug(baseSlug);
+  }
+
+  await doc.save();
+  return doc;
+};
+
+const adminDeleteFundraiser = async (id: string): Promise<void> => {
+  const result = await Fundraiser.findByIdAndDelete(id);
+  if (!result)
+    throw new AppError(StatusCodes.NOT_FOUND, 'Fundraiser not found');
+};
+
+const adminGetById = async (id: string): Promise<IFundraiser | null> => {
+  return Fundraiser.findById(id);
+};
+
 export const FundraiserService = {
   createDraft,
   updateFundraiser,
   publishFundraiser,
   getMine,
   getBySlug,
+  getAllFundraisers,
+  getPublicFundraisers,
+  adminCreateFundraiser,
+  adminUpdateFundraiser,
+  adminDeleteFundraiser,
+  adminGetById,
 };

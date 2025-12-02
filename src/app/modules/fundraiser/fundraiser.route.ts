@@ -3,14 +3,38 @@ import auth from '../../middlewares/auth';
 import { validateRequest } from '../../middlewares/validateRequest';
 import { FundraiserController } from './fundraiser.controller';
 import {
+  adminCreateFundraiserValidation,
   createFundraiserValidation,
+  getByIdParamValidation,
   getBySlugParamValidation,
+  getFundraisersQueryValidation,
   getMineQueryValidation,
+  getPublicFundraisersQueryValidation,
   publishFundraiserValidation,
   updateFundraiserValidation,
 } from './fundraiser.validation';
 
 const router = Router();
+
+router.get(
+  '/',
+  auth('admin'),
+  validateRequest(getFundraisersQueryValidation),
+  FundraiserController.getAll
+);
+
+router.post(
+  '/owner/:ownerId',
+  auth('admin'),
+  validateRequest(adminCreateFundraiserValidation),
+  FundraiserController.adminCreate
+);
+
+router.get(
+  '/public',
+  validateRequest(getPublicFundraisersQueryValidation),
+  FundraiserController.getPublic
+);
 
 // Create a draft
 router.post(
@@ -49,6 +73,27 @@ router.get(
   '/slug/:slug',
   validateRequest(getBySlugParamValidation),
   FundraiserController.getBySlug
+);
+
+router.get(
+  '/:id',
+  auth('admin'),
+  validateRequest(getByIdParamValidation),
+  FundraiserController.adminGetById
+);
+
+router.patch(
+  '/admin/:id',
+  auth('admin'),
+  validateRequest(updateFundraiserValidation),
+  FundraiserController.adminUpdate
+);
+
+router.delete(
+  '/admin/:id',
+  auth('admin'),
+  validateRequest(getByIdParamValidation),
+  FundraiserController.adminDelete
 );
 
 export const FundraiserRoute = router;
