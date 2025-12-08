@@ -67,4 +67,9 @@ export default {
     secure: parseBoolean(process.env.EMAIL_SECURE),
     from: process.env.EMAIL_FROM,
   },
+  stripe: {
+    secret_key: process.env.STRIPE_SECRET_KEY,
+    webhook_secret: process.env.STRIPE_WEBHOOK_SECRET,
+    publishable_key: process.env.STRIPE_PUBLISHABLE_KEY,
+  },
 };

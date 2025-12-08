@@ -155,3 +155,39 @@ export const deleteActivityByReaction = async (
     type: 'REACTION',
   });
 };
+
+// Admin: Get all activities
+export const getAllActivities = async (options: GetActivitiesOptions = {}) => {
+  const page = Math.max(1, options.page || 1);
+  const limit = Math.min(
+    MAX_PAGE_SIZE,
+    Math.max(1, options.limit || DEFAULT_PAGE_SIZE)
+  );
+  const skip = (page - 1) * limit;
+
+  const [activities, total] = await Promise.all([
+    Activity.find()
+      .populate('user', 'name email profilePicture')
+      .populate('fundraiser', 'title slug coverImage')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Activity.countDocuments(),
+  ]);
+
+  return {
+    data: activities,
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+};
+
+// Admin: Delete activity
+export const deleteActivity = async (activityId: string): Promise<void> => {
+  await Activity.findByIdAndDelete(activityId);
+};

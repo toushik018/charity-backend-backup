@@ -41,4 +41,14 @@ router.get(
   ActivityController.getFundraiserActivities
 );
 
+// Admin: Get all activities
+router.get('/admin/all', auth('admin'), ActivityController.getAllActivities);
+
+// Admin: Delete activity
+router.delete(
+  '/admin/:activityId',
+  auth('admin'),
+  ActivityController.deleteActivity
+);
+
 export const ActivityRoute = router;

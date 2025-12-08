@@ -7,6 +7,8 @@ import { AuthRequest } from '../auth/auth.interface';
 import { TActivityType } from './activity.interface';
 import {
   createActivity,
+  deleteActivity,
+  getAllActivities,
   getFundraiserActivities,
   getPublicUserActivities,
   getUserActivities,
@@ -123,9 +125,47 @@ const getFundraiserActivitiesController = catchAsync(
   }
 );
 
+// Admin: Get all activities
+const getAllActivitiesController = catchAsync(
+  async (req: AuthRequest, res: Response) => {
+    const { page, limit } = req.query as Record<string, string>;
+    const options = {
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
+    };
+
+    const result = await getAllActivities(options);
+
+    sendResponse(res, {
+      statusCode: StatusCodes.OK,
+      success: true,
+      message: 'All activities retrieved successfully',
+      meta: result.meta,
+      data: result.data,
+    });
+  }
+);
+
+// Admin: Delete activity
+const deleteActivityController = catchAsync(
+  async (req: AuthRequest, res: Response) => {
+    const { activityId } = req.params as { activityId: string };
+    await deleteActivity(activityId);
+
+    sendResponse(res, {
+      statusCode: StatusCodes.OK,
+      success: true,
+      message: 'Activity deleted successfully',
+      data: null,
+    });
+  }
+);
+
 export const ActivityController = {
   create,
   getMyActivities,
   getUserActivities: getUserActivitiesController,
   getFundraiserActivities: getFundraiserActivitiesController,
+  getAllActivities: getAllActivitiesController,
+  deleteActivity: deleteActivityController,
 };

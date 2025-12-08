@@ -3,6 +3,7 @@ import { ActivityRoute } from '../app/modules/activity/activity.route';
 import { AuthRoute } from '../app/modules/auth/auth.route';
 import { DonationRoute } from '../app/modules/donation/donation.route';
 import { FundraiserRoute } from '../app/modules/fundraiser/fundraiser.route';
+import { StripeRoute } from '../app/modules/stripe/stripe.route';
 import { UploadRoute } from '../app/modules/upload/upload.route';
 import { UserRoutes } from '../app/modules/user/user.route';
 
@@ -32,6 +33,10 @@ const moduleRoutes = [
   {
     path: '/activities',
     route: ActivityRoute,
+  },
+  {
+    path: '/stripe',
+    route: StripeRoute,
   },
 ];
 
