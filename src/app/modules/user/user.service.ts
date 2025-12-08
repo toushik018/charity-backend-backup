@@ -75,6 +75,34 @@ export const getUserByIdFromDB = async (userId: string) => {
   }
 };
 
+export const getPublicUserProfileFromDB = async (userId: string) => {
+  try {
+    const user = await User.findById(userId)
+      .select('name profilePicture coverImage bio followers following')
+      .lean({ virtuals: true });
+
+    if (!user) {
+      throw new AppError(StatusCodes.NOT_FOUND, 'User not found');
+    }
+
+    return {
+      _id: user._id,
+      name: user.name,
+      profilePicture: user.profilePicture,
+      coverImage: user.coverImage,
+      bio: user.bio,
+      followersCount: Array.isArray(user.followers) ? user.followers.length : 0,
+      followingCount: Array.isArray(user.following) ? user.following.length : 0,
+    };
+  } catch (error) {
+    if (error instanceof AppError) throw error;
+    throw new AppError(
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      (error as Error)?.message || 'Failed to fetch public profile'
+    );
+  }
+};
+
 export const createUserInDB = async (payload: Partial<TUser>) => {
   try {
     const email = (payload.email || '').toLowerCase();

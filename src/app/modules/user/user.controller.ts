@@ -14,6 +14,7 @@ import {
   getDiscoverUsers,
   getFollowersFromDB,
   getFollowingFromDB,
+  getPublicUserProfileFromDB,
   getUserByIdFromDB,
   unfollowUserInDB,
   updateHighlightsInDB,
@@ -312,6 +313,18 @@ const updateMyHighlights = catchAsync(
   }
 );
 
+const getPublicProfile = catchAsync(async (req: AuthRequest, res: Response) => {
+  const { userId } = req.params;
+  const result = await getPublicUserProfileFromDB(userId);
+
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Public profile retrieved successfully',
+    data: result,
+  });
+});
+
 export const UserController = {
   getAllUsers,
   getSingleUser,
@@ -324,6 +337,7 @@ export const UserController = {
   getFollowers,
   getFollowing,
   updateMyHighlights,
+  getPublicProfile,
   discoverUsers: catchAsync(async (req: AuthRequest, res: Response) => {
     const requester = req.user;
     const limitParam = (req.query?.limit as string) || '';

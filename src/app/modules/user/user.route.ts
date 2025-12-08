@@ -42,6 +42,13 @@ router.patch(
 router.get('/discover', auth('admin', 'user'), UserController.discoverUsers);
 router.get('/browse', auth('admin', 'user'), UserController.browseUsers);
 
+// Public profile - no auth required
+router.get(
+  '/:userId/public',
+  validateRequest(getUserByIdParamValidation),
+  UserController.getPublicProfile
+);
+
 router.get(
   '/:userId',
   auth('admin', 'user'),

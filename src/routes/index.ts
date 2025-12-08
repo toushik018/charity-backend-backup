@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { ActivityRoute } from '../app/modules/activity/activity.route';
 import { AuthRoute } from '../app/modules/auth/auth.route';
 import { FundraiserRoute } from '../app/modules/fundraiser/fundraiser.route';
 import { UploadRoute } from '../app/modules/upload/upload.route';
@@ -22,6 +23,10 @@ const moduleRoutes = [
   {
     path: '/fundraisers',
     route: FundraiserRoute,
+  },
+  {
+    path: '/activities',
+    route: ActivityRoute,
   },
 ];
 

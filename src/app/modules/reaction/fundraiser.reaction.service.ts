@@ -1,6 +1,10 @@
 import { StatusCodes } from 'http-status-codes';
 import { Types } from 'mongoose';
 import AppError from '../../error/AppError';
+import {
+  createActivity,
+  deleteActivityByReaction,
+} from '../activity/activity.service';
 import { Fundraiser } from '../fundraiser/fundraiser.model';
 import type { TListOptions } from '../user/user.service';
 import { TReactionType } from './fundraiser.reaction.interface';
@@ -26,11 +30,24 @@ export const addOrUpdateReaction = async (
     user: new Types.ObjectId(userId),
   } as const;
 
+  // Check if this is a new reaction or update
+  const existing = await FundraiserReaction.findOne(filter).lean();
+
   const updated = await FundraiserReaction.findOneAndUpdate(
     filter,
     { $set: { type } },
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );
+
+  // Create activity only for new reactions
+  if (!existing) {
+    await createActivity({
+      userId,
+      type: 'REACTION',
+      fundraiserId,
+      reactionType: type,
+    });
+  }
 
   return updated;
 };
@@ -40,6 +57,10 @@ export const removeReaction = async (userId: string, fundraiserId: string) => {
     fundraiser: new Types.ObjectId(fundraiserId),
     user: new Types.ObjectId(userId),
   });
+
+  // Remove the corresponding activity
+  await deleteActivityByReaction(userId, fundraiserId);
+
   return {};
 };
 
