@@ -183,9 +183,216 @@ const getMyDonations = async (donorId: string, page = 1, limit = 20) => {
   };
 };
 
+// Admin: Get all donations
+const getAllDonations = async (page = 1, limit = 20) => {
+  const skip = (page - 1) * limit;
+
+  const donations = await Donation.find()
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .populate('fundraiser', 'title slug coverImage')
+    .populate('donor', 'name email profilePicture');
+
+  const total = await Donation.countDocuments();
+
+  return {
+    donations,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+};
+
+// Admin: Get donation stats
+const getDonationStats = async () => {
+  const [totalDonations, completedDonations, totalAmount, recentDonations] =
+    await Promise.all([
+      Donation.countDocuments(),
+      Donation.countDocuments({ paymentStatus: 'completed' }),
+      Donation.aggregate([
+        { $match: { paymentStatus: 'completed' } },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: '$amount' },
+            tips: { $sum: '$tipAmount' },
+          },
+        },
+      ]),
+      Donation.find()
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .populate('fundraiser', 'title slug')
+        .populate('donor', 'name profilePicture'),
+    ]);
+
+  return {
+    totalDonations,
+    completedDonations,
+    totalAmount: totalAmount[0]?.total || 0,
+    totalTips: totalAmount[0]?.tips || 0,
+    recentDonations,
+  };
+};
+
+// Admin: Delete donation
+const deleteDonation = async (donationId: string) => {
+  const donation = await Donation.findByIdAndDelete(donationId);
+  if (!donation) {
+    throw new AppError(StatusCodes.NOT_FOUND, 'Donation not found');
+  }
+  return donation;
+};
+
+const getMyImpactStats = async (donorId: string) => {
+  const donations = await Donation.find({
+    donor: donorId,
+    paymentStatus: 'completed',
+  }).populate('fundraiser', 'title slug coverImage');
+
+  const totalDonated = donations.reduce((sum, d) => sum + d.amount, 0);
+  const totalTips = donations.reduce((sum, d) => sum + d.tipAmount, 0);
+  const fundraisersSupported = new Set(
+    donations.map((d) => d.fundraiser?._id?.toString()).filter(Boolean)
+  ).size;
+
+  return {
+    totalDonated,
+    totalTips,
+    totalImpact: totalDonated + totalTips,
+    donationCount: donations.length,
+    fundraisersSupported,
+    currency: 'USD',
+  };
+};
+
+// Create donation from Stripe webhook (after successful payment)
+interface CreateDonationFromStripePayload {
+  fundraiserId: string;
+  amount: number;
+  tipAmount: number;
+  currency: string;
+  paymentMethod: string;
+  isAnonymous: boolean;
+  donorName: string;
+  donorEmail: string;
+  transactionId: string;
+  paymentStatus: 'pending' | 'completed' | 'failed';
+  donorId?: string;
+}
+
+const createDonationFromStripe = async (
+  payload: CreateDonationFromStripePayload
+) => {
+  const {
+    fundraiserId,
+    amount,
+    tipAmount,
+    currency,
+    paymentMethod,
+    isAnonymous,
+    donorName,
+    donorEmail,
+    transactionId,
+    paymentStatus,
+    donorId,
+  } = payload;
+
+  // Check if donation already exists (idempotency)
+  const existingDonation = await Donation.findOne({ transactionId });
+  if (existingDonation) {
+    return existingDonation;
+  }
+
+  // Verify fundraiser exists
+  const fundraiser = await Fundraiser.findById(fundraiserId);
+  if (!fundraiser) {
+    throw new AppError(StatusCodes.NOT_FOUND, 'Fundraiser not found');
+  }
+
+  const totalAmount = amount + tipAmount;
+
+  // Start a session for transaction
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    // Create donation record
+    const [donation] = await Donation.create(
+      [
+        {
+          fundraiser: fundraiserId,
+          donor: donorId || undefined,
+          amount,
+          tipAmount,
+          totalAmount,
+          currency,
+          paymentMethod,
+          paymentStatus,
+          isAnonymous,
+          donorName,
+          donorEmail,
+          transactionId,
+        },
+      ],
+      { session }
+    );
+
+    // Update fundraiser's currentAmount and donationCount only if completed
+    if (paymentStatus === 'completed') {
+      await Fundraiser.findByIdAndUpdate(
+        fundraiserId,
+        {
+          $inc: {
+            currentAmount: amount,
+            donationCount: 1,
+          },
+        },
+        { session }
+      );
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    // Create activity for logged-in users (non-anonymous donations)
+    if (donorId && !isAnonymous && paymentStatus === 'completed') {
+      try {
+        await createActivity({
+          userId: donorId,
+          type: 'DONATION',
+          fundraiserId,
+          donationAmount: amount,
+          donationCurrency: currency,
+          isPublic: true,
+        });
+      } catch (activityError) {
+        // Log error but don't fail the donation
+        // eslint-disable-next-line no-console
+        console.error('Failed to create donation activity:', activityError);
+      }
+    }
+
+    return donation;
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
+  }
+};
+
 export const DonationService = {
   createDonation,
+  createDonationFromStripe,
   getDonationsByFundraiser,
   getTopDonations,
   getMyDonations,
+  getMyImpactStats,
+  getAllDonations,
+  getDonationStats,
+  deleteDonation,
 };

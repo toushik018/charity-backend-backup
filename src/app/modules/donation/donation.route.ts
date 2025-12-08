@@ -41,4 +41,24 @@ router.get(
   DonationController.getMyDonations
 );
 
+// Get my impact stats (authenticated)
+router.get(
+  '/impact',
+  auth('admin', 'user'),
+  DonationController.getMyImpactStats
+);
+
+// Admin: Get all donations
+router.get('/admin/all', auth('admin'), DonationController.getAllDonations);
+
+// Admin: Get donation stats
+router.get('/admin/stats', auth('admin'), DonationController.getDonationStats);
+
+// Admin: Delete donation
+router.delete(
+  '/admin/:donationId',
+  auth('admin'),
+  DonationController.deleteDonation
+);
+
 export const DonationRoute = router;

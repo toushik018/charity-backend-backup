@@ -23,6 +23,9 @@ app.use(compression());
 // Request logging (skip noisy logs in tests)
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
+// Stripe webhook needs raw body - must be before json parser
+app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
+
 // Parsers with sane size limits (large uploads should use multipart endpoints)
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));

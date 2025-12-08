@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { catchAsync } from '../../utils/catchAsync';
 import { sendResponse } from '../../utils/sendResponse';
@@ -69,9 +69,67 @@ const getMyDonations = catchAsync(async (req: AuthRequest, res: Response) => {
   });
 });
 
+const getMyImpactStats = catchAsync(async (req: AuthRequest, res: Response) => {
+  const donorId = req.user!.userId;
+  const result = await DonationService.getMyImpactStats(donorId);
+
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Impact stats retrieved successfully',
+    data: result,
+  });
+});
+
+// Admin: Get all donations
+const getAllDonations = catchAsync(async (req: Request, res: Response) => {
+  const { page = 1, limit = 20 } = req.query;
+  const result = await DonationService.getAllDonations(
+    Number(page),
+    Number(limit)
+  );
+
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'All donations retrieved successfully',
+    data: result.donations,
+    meta: result.pagination,
+  });
+});
+
+// Admin: Get donation stats
+const getDonationStats = catchAsync(async (_req: Request, res: Response) => {
+  const result = await DonationService.getDonationStats();
+
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Donation stats retrieved successfully',
+    data: result,
+  });
+});
+
+// Admin: Delete donation
+const deleteDonation = catchAsync(async (req: Request, res: Response) => {
+  const { donationId } = req.params;
+  await DonationService.deleteDonation(donationId);
+
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Donation deleted successfully',
+    data: null,
+  });
+});
+
 export const DonationController = {
   createDonation,
   getDonationsByFundraiser,
   getTopDonations,
   getMyDonations,
+  getMyImpactStats,
+  getAllDonations,
+  getDonationStats,
+  deleteDonation,
 };
