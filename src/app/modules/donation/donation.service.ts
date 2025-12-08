@@ -1,6 +1,7 @@
 import { StatusCodes } from 'http-status-codes';
 import mongoose from 'mongoose';
 import AppError from '../../error/AppError';
+import { createActivity } from '../activity/activity.service';
 import { Fundraiser } from '../fundraiser/fundraiser.model';
 import { TCreateDonationPayload } from './donation.interface';
 import { Donation } from './donation.model';
@@ -76,6 +77,23 @@ const createDonation = async (
 
     await session.commitTransaction();
     session.endSession();
+
+    // Create activity for logged-in users (non-anonymous donations)
+    if (donorId && !isAnonymous) {
+      try {
+        await createActivity({
+          userId: donorId,
+          type: 'DONATION',
+          fundraiserId,
+          donationAmount: amount,
+          donationCurrency: currency,
+          isPublic: true,
+        });
+      } catch (activityError) {
+        // Log error but don't fail the donation
+        console.error('Failed to create donation activity:', activityError);
+      }
+    }
 
     // Return donation with populated fundraiser
     const populatedDonation = await Donation.findById(donation._id)
