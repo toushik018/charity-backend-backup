@@ -24,7 +24,10 @@ const fundraiserSchema = new Schema<IFundraiser>(
     currency: { type: String, trim: true },
     category: { type: String, trim: true },
     story: { type: String, trim: true },
+    description: { type: String, trim: true },
+    location: { type: String, trim: true },
     country: { type: String, trim: true },
+    donationCount: { type: Number, default: 0, min: 0 },
     zipCode: { type: String, trim: true },
     beneficiaryType: {
       type: String,

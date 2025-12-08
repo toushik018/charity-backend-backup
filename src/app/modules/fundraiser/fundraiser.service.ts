@@ -32,15 +32,19 @@ const createDraft = async (
     coverImage: payload.coverImage,
     gallery: payload.gallery || [],
     goalAmount: payload.goalAmount,
+    currentAmount: payload.currentAmount || 0,
     currency: payload.currency,
     category: payload.category,
     story: payload.story,
+    description: payload.description,
+    location: payload.location,
     country: payload.country,
     zipCode: payload.zipCode,
     beneficiaryType: payload.beneficiaryType,
     nonprofit: payload.nonprofit ?? null,
     automatedGoal: payload.automatedGoal,
     longTermNeed: payload.longTermNeed,
+    donationCount: payload.donationCount || 0,
   });
   return doc;
 };

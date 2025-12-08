@@ -14,7 +14,8 @@
     "lint:fix": "eslint src/**/*.ts --fix",
     "format": "prettier --write .",
     "prepare": "husky",
-    "type-check": "tsc --pretty --noEmit"
+    "type-check": "tsc --pretty --noEmit",
+    "seed": "ts-node-dev src/scripts/seed-fundraisers.ts"
   },
   "lint-staged": {
     "src/**/*.{ts,js}": [

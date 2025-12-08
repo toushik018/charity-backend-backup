@@ -15,6 +15,8 @@ export interface IFundraiser extends Document {
   currency?: string;
   category?: string;
   story?: string;
+  description?: string;
+  location?: string;
   country?: string;
   zipCode?: string;
   beneficiaryType?: 'yourself' | 'someone_else' | 'charity';
@@ -29,6 +31,7 @@ export interface IFundraiser extends Document {
   } | null;
   automatedGoal?: boolean;
   longTermNeed?: 'YES' | 'NO';
+  donationCount?: number;
   publishedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -42,6 +45,8 @@ export interface IFundraiserCreateRequest {
   currency?: string;
   category?: string;
   story?: string;
+  description?: string;
+  location?: string;
   country?: string;
   zipCode?: string;
   beneficiaryType?: 'yourself' | 'someone_else' | 'charity';
@@ -56,6 +61,8 @@ export interface IFundraiserCreateRequest {
   } | null;
   automatedGoal?: boolean;
   longTermNeed?: 'YES' | 'NO';
+  donationCount?: number;
+  currentAmount?: number;
 }
 
 export interface IFundraiserUpdateRequest {
