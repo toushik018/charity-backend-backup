@@ -79,12 +79,20 @@ export const getPublicUserProfileFromDB = async (userId: string) => {
   try {
     const user = await User.findById(userId)
       .select(
-        'name profilePicture coverImage bio followers following pinnedFundraisers'
+        'name profilePicture coverImage bio followers following pinnedFundraisers profile'
       )
       .populate({
         path: 'pinnedFundraisers',
         select: '_id title slug coverImage currentAmount goalAmount category',
         match: { status: 'published' },
+      })
+      .populate({
+        path: 'followers',
+        select: '_id name profilePicture',
+      })
+      .populate({
+        path: 'following',
+        select: '_id name profilePicture',
       })
       .lean({ virtuals: true });
 
@@ -100,7 +108,10 @@ export const getPublicUserProfileFromDB = async (userId: string) => {
       bio: user.bio,
       followersCount: Array.isArray(user.followers) ? user.followers.length : 0,
       followingCount: Array.isArray(user.following) ? user.following.length : 0,
+      followers: user.followers || [],
+      following: user.following || [],
       pinnedFundraisers: user.pinnedFundraisers || [],
+      socials: user.profile?.socials || null,
     };
   } catch (error) {
     if (error instanceof AppError) throw error;
