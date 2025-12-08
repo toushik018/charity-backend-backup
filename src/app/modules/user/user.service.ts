@@ -78,7 +78,14 @@ export const getUserByIdFromDB = async (userId: string) => {
 export const getPublicUserProfileFromDB = async (userId: string) => {
   try {
     const user = await User.findById(userId)
-      .select('name profilePicture coverImage bio followers following')
+      .select(
+        'name profilePicture coverImage bio followers following pinnedFundraisers'
+      )
+      .populate({
+        path: 'pinnedFundraisers',
+        select: '_id title slug coverImage currentAmount goalAmount category',
+        match: { status: 'published' },
+      })
       .lean({ virtuals: true });
 
     if (!user) {
@@ -93,6 +100,7 @@ export const getPublicUserProfileFromDB = async (userId: string) => {
       bio: user.bio,
       followersCount: Array.isArray(user.followers) ? user.followers.length : 0,
       followingCount: Array.isArray(user.following) ? user.following.length : 0,
+      pinnedFundraisers: user.pinnedFundraisers || [],
     };
   } catch (error) {
     if (error instanceof AppError) throw error;
