@@ -39,6 +39,8 @@ const corsConfig = {
       'http://localhost:5173',
       'http://localhost:3000',
       'http://localhost:3001',
+      'https://fundsusko.vercel.app',
+      'https://fundsusko.vercel.app/',
     ];
     const configured = Array.isArray(config.cors_origins)
       ? config.cors_origins
