@@ -1,0 +1,505 @@
+{
+  "info": {
+    "name": "Fundsus API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:5000/api" },
+    { "key": "access_token", "value": "" },
+    { "key": "refresh_token", "value": "" },
+    { "key": "userId", "value": "" },
+    { "key": "ownerId", "value": "" },
+    { "key": "fundraiserId", "value": "" },
+    { "key": "slug", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{access_token}}", "type": "string" }
+    ]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\",\n  \"name\": \"Test User\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json && json.data) {",
+                  "  if (json.data.accessToken) pm.collectionVariables.set('access_token', json.data.accessToken);",
+                  "  if (json.data.refreshToken) pm.collectionVariables.set\n  ('refresh_token', json.data.refreshToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Social Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/auth/social-login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "social-login"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"name\": \"User\",\n  \"image\": \"https://example.com/avatar.png\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Auto Refresh",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/auth/auto-refresh",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "auto-refresh"]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token (body fallback)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json && json.data) {",
+                  "  if (json.data.accessToken) pm.collectionVariables.set('access_token', json.data.accessToken);",
+                  "  if (json.data.refreshToken) pm.collectionVariables.set('refresh_token', json.data.refreshToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/auth/refresh-token",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "refresh-token"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Verify Token (admin)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/auth/verify-token",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "verify-token"]
+            }
+          }
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/auth/profile",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/auth/profile",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "profile"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\",\n  \"profilePicture\": \"https://example.com/img.png\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/auth/change-password",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "change-password"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"password123\",\n  \"newPassword\": \"password456\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users (admin)",
+      "item": [
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/users?searchTerm=&role=&isActive=&page=1&limit=10&sortBy=createdAt&sortOrder=desc",
+              "host": ["{{base_url}}"],
+              "path": ["users"],
+              "query": [
+                { "key": "searchTerm", "value": "" },
+                { "key": "role", "value": "" },
+                { "key": "isActive", "value": "" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "sortBy", "value": "createdAt" },
+                { "key": "sortOrder", "value": "desc" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/users",
+              "host": ["{{base_url}}"],
+              "path": ["users"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"New User\",\n  \"email\": \"new@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"user\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get User by Id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/users/{{userId}}",
+              "host": ["{{base_url}}"],
+              "path": ["users", "{{userId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Me",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/users/me",
+              "host": ["{{base_url}}"],
+              "path": ["users", "me"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"My New Name\",\n  \"profile\": { \"phone\": \"\", \"address\": \"\" }\n}"
+            }
+          }
+        },
+        {
+          "name": "Update User (admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/users/{{userId}}",
+              "host": ["{{base_url}}"],
+              "path": ["users", "{{userId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated User\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete User (admin)",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/users/{{userId}}",
+              "host": ["{{base_url}}"],
+              "path": ["users", "{{userId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Upload",
+      "item": [
+        {
+          "name": "Upload Profile Picture (multipart)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": ["/absolute/path/to/image.jpg"]
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/upload/profile-picture",
+              "host": ["{{base_url}}"],
+              "path": ["upload", "profile-picture"]
+            }
+          }
+        },
+        {
+          "name": "Upload Base64 Image",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/upload/base64-image",
+              "host": ["{{base_url}}"],
+              "path": ["upload", "base64-image"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"image\": \"data:image/png;base64,iVBORw0...\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Fundraisers",
+      "item": [
+        {
+          "name": "List Fundraisers (admin)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/fundraisers?searchTerm=&status=&owner=&category=&country=&page=1&limit=10&sortBy=createdAt&sortOrder=desc",
+              "host": ["{{base_url}}"],
+              "path": ["fundraisers"],
+              "query": [
+                { "key": "searchTerm", "value": "" },
+                { "key": "status", "value": "" },
+                { "key": "owner", "value": "" },
+                { "key": "category", "value": "" },
+                { "key": "country", "value": "" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "sortBy", "value": "createdAt" },
+                { "key": "sortOrder", "value": "desc" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Fundraiser for Owner (admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/fundraisers/owner/{{ownerId}}",
+              "host": ["{{base_url}}"],
+              "path": ["fundraisers", "owner", "{{ownerId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Help Needed\",\n  \"goalAmount\": 1000,\n  \"category\": \"health\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Public Fundraisers",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/fundraisers/public?searchTerm=&owner=&category=&country=&page=1&limit=10&sortBy=publishedAt&sortOrder=desc",
+              "host": ["{{base_url}}"],
+              "path": ["fundraisers", "public"],
+              "query": [
+                { "key": "searchTerm", "value": "" },
+                { "key": "owner", "value": "" },
+                { "key": "category", "value": "" },
+                { "key": "country", "value": "" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "sortBy", "value": "publishedAt" },
+                { "key": "sortOrder", "value": "desc" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Fundraiser by Slug (public)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/fundraisers/slug/{{slug}}",
+              "host": ["{{base_url}}"],
+              "path": ["fundraisers", "slug", "{{slug}}"]
+            }
+          }
+        },
+        {
+          "name": "Create Draft (owner)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/fundraisers/drafts",
+              "host": ["{{base_url}}"],
+              "path": ["fundraisers", "drafts"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"My Fundraiser\",\n  \"goalAmount\": 5000,\n  \"category\": \"education\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Fundraiser (owner)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/fundraisers/{{fundraiserId}}",
+              "host": ["{{base_url}}"],
+              "path": ["fundraisers", "{{fundraiserId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Title\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Publish Fundraiser (owner)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/fundraisers/{{fundraiserId}}/publish",
+              "host": ["{{base_url}}"],
+              "path": ["fundraisers", "{{fundraiserId}}", "publish"]
+            }
+          }
+        },
+        {
+          "name": "My Fundraisers (owner)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/fundraisers/mine?status=published",
+              "host": ["{{base_url}}"],
+              "path": ["fundraisers", "mine"],
+              "query": [{ "key": "status", "value": "published" }]
+            }
+          }
+        },
+        {
+          "name": "Get Fundraiser by Id (admin)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/fundraisers/{{fundraiserId}}",
+              "host": ["{{base_url}}"],
+              "path": ["fundraisers", "{{fundraiserId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Fundraiser (admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/fundraisers/admin/{{fundraiserId}}",
+              "host": ["{{base_url}}"],
+              "path": ["fundraisers", "admin", "{{fundraiserId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Admin Updated Title\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Fundraiser (admin)",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/fundraisers/admin/{{fundraiserId}}",
+              "host": ["{{base_url}}"],
+              "path": ["fundraisers", "admin", "{{fundraiserId}}"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
