@@ -15,4 +15,11 @@ router.post(
 // The webhook route is registered separately in app.ts with express.raw()
 router.post('/webhook', StripeController.handleWebhook);
 
+// Confirm payment and create donation record (called after successful payment)
+router.post(
+  '/confirm-payment',
+  optionalAuth,
+  StripeController.confirmPaymentAndCreateDonation
+);
+
 export const StripeRoute = router;
