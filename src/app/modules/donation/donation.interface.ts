@@ -1,6 +1,7 @@
 import { Document, Types } from 'mongoose';
 
 export interface IDonation extends Document {
+  _id: Types.ObjectId;
   fundraiser: Types.ObjectId;
   donor?: Types.ObjectId;
   amount: number;

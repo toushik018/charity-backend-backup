@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { ActivityRoute } from '../app/modules/activity/activity.route';
 import { AuthRoute } from '../app/modules/auth/auth.route';
+import { CouponRoutes } from '../app/modules/coupon';
 import { DonationRoute } from '../app/modules/donation/donation.route';
 import { FundraiserRoute } from '../app/modules/fundraiser/fundraiser.route';
 import { StripeRoute } from '../app/modules/stripe/stripe.route';
@@ -37,6 +38,10 @@ const moduleRoutes = [
   {
     path: '/stripe',
     route: StripeRoute,
+  },
+  {
+    path: '/coupons',
+    route: CouponRoutes,
   },
 ];
 

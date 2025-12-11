@@ -116,7 +116,66 @@ async function handlePaymentFailure(_paymentIntent: Stripe.PaymentIntent) {
   // Optionally log failed payment attempts or notify user
 }
 
+/**
+ * Confirm payment and create donation record
+ * Called by client after successful Stripe payment
+ */
+const confirmPaymentAndCreateDonation = catchAsync(
+  async (req: AuthRequest, res: Response) => {
+    const { paymentIntentId } = req.body;
+    const donorId = req.user?.userId;
+
+    if (!paymentIntentId) {
+      sendResponse(res, {
+        statusCode: StatusCodes.BAD_REQUEST,
+        success: false,
+        message: 'Payment intent ID is required',
+        data: null,
+      });
+      return;
+    }
+
+    // Retrieve the payment intent from Stripe to verify it succeeded
+    const paymentIntent = await StripeService.getPaymentIntent(paymentIntentId);
+
+    if (paymentIntent.status !== 'succeeded') {
+      sendResponse(res, {
+        statusCode: StatusCodes.BAD_REQUEST,
+        success: false,
+        message: `Payment not completed. Status: ${paymentIntent.status}`,
+        data: null,
+      });
+      return;
+    }
+
+    const metadata = paymentIntent.metadata;
+
+    // Create the donation record
+    const donation = await DonationService.createDonationFromStripe({
+      fundraiserId: metadata.fundraiserId,
+      amount: parseFloat(metadata.donationAmount),
+      tipAmount: parseFloat(metadata.tipAmount || '0'),
+      currency: paymentIntent.currency.toUpperCase(),
+      paymentMethod: 'card',
+      isAnonymous: metadata.isAnonymous === 'true',
+      donorName: metadata.donorName,
+      donorEmail: metadata.donorEmail,
+      transactionId: paymentIntent.id,
+      paymentStatus: 'completed',
+      donorId: donorId || metadata.donorId || undefined,
+    });
+
+    sendResponse(res, {
+      statusCode: StatusCodes.OK,
+      success: true,
+      message: 'Donation recorded successfully',
+      data: donation,
+    });
+  }
+);
+
 export const StripeController = {
   createPaymentIntent,
   handleWebhook,
+  confirmPaymentAndCreateDonation,
 };

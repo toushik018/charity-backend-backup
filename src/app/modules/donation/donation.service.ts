@@ -2,6 +2,7 @@ import { StatusCodes } from 'http-status-codes';
 import mongoose from 'mongoose';
 import AppError from '../../error/AppError';
 import { createActivity } from '../activity/activity.service';
+import { CouponService } from '../coupon/coupon.service';
 import { Fundraiser } from '../fundraiser/fundraiser.model';
 import { TCreateDonationPayload } from './donation.interface';
 import { Donation } from './donation.model';
@@ -91,8 +92,27 @@ const createDonation = async (
         });
       } catch (activityError) {
         // Log error but don't fail the donation
+        // eslint-disable-next-line no-console
         console.error('Failed to create donation activity:', activityError);
       }
+    }
+
+    // Create and send coupon for the donation
+    try {
+      await CouponService.createCoupon({
+        donationId: donation._id.toString(),
+        fundraiserId,
+        userId: donorId,
+        donorEmail,
+        donorName,
+        donationAmount: amount,
+        currency,
+        fundraiserTitle: fundraiser.title,
+      });
+    } catch (couponError) {
+      // Log error but don't fail the donation
+      // eslint-disable-next-line no-console
+      console.error('Failed to create coupon:', couponError);
     }
 
     // Return donation with populated fundraiser
@@ -374,6 +394,26 @@ const createDonationFromStripe = async (
         // Log error but don't fail the donation
         // eslint-disable-next-line no-console
         console.error('Failed to create donation activity:', activityError);
+      }
+    }
+
+    // Create and send coupon for completed donations
+    if (paymentStatus === 'completed') {
+      try {
+        await CouponService.createCoupon({
+          donationId: donation._id.toString(),
+          fundraiserId,
+          userId: donorId,
+          donorEmail,
+          donorName,
+          donationAmount: amount,
+          currency,
+          fundraiserTitle: fundraiser.title,
+        });
+      } catch (couponError) {
+        // Log error but don't fail the donation
+        // eslint-disable-next-line no-console
+        console.error('Failed to create coupon:', couponError);
       }
     }
 
