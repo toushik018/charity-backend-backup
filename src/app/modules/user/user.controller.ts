@@ -10,6 +10,7 @@ import {
   createUserInDB,
   deleteUserFromDB,
   followUserInDB,
+  getAdminUserDetailsFromDB,
   getAllUsersFromDB,
   getDiscoverUsers,
   getFollowersFromDB,
@@ -64,6 +65,29 @@ export const getAllUsers = catchAsync(
       message: 'Users retrieved successfully',
       meta: result.meta,
       data: result.data,
+    });
+  }
+);
+
+export const getAdminUserDetails = catchAsync(
+  async (req: AuthRequest, res: Response) => {
+    const requester = req.user;
+
+    if (!requester || requester.role !== 'admin') {
+      throw new AppError(
+        StatusCodes.FORBIDDEN,
+        'Only admins can view admin user details'
+      );
+    }
+
+    const { userId } = req.params as { userId: string };
+    const result = await getAdminUserDetailsFromDB(userId);
+
+    sendResponse(res, {
+      statusCode: StatusCodes.OK,
+      success: true,
+      message: 'Admin user details retrieved successfully',
+      data: result,
     });
   }
 );
@@ -328,6 +352,7 @@ const getPublicProfile = catchAsync(async (req: AuthRequest, res: Response) => {
 export const UserController = {
   getAllUsers,
   getSingleUser,
+  getAdminUserDetails,
   updateUser,
   updateMe,
   deleteUser,
