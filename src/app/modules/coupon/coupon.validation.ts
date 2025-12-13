@@ -77,9 +77,36 @@ export const getCouponStatsSchema = z.object({
   }),
 });
 
+/**
+ * Validation schema for admin coupon list endpoint.
+ *
+ * Supports pagination and optional filtering.
+ */
+export const getAllCouponsSchema = z.object({
+  query: z.object({
+    page: z
+      .string()
+      .regex(/^\d+$/, 'Page must be a positive integer')
+      .optional()
+      .transform((val) => (val ? parseInt(val, 10) : 1)),
+    limit: z
+      .string()
+      .regex(/^\d+$/, 'Limit must be a positive integer')
+      .optional()
+      .transform((val) => (val ? parseInt(val, 10) : 20)),
+    search: z.string().optional(),
+    status: z.enum(['active', 'used', 'expired']).optional(),
+    fundraiserId: z
+      .string()
+      .regex(/^[a-fA-F0-9]{24}$/, 'Invalid fundraiser ID format')
+      .optional(),
+  }),
+});
+
 export const CouponValidation = {
   selectWinnerSchema,
   getUserCouponsSchema,
   getCouponByCodeSchema,
   getCouponStatsSchema,
+  getAllCouponsSchema,
 };

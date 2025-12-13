@@ -170,10 +170,52 @@ const cleanupExpiredCoupons = catchAsync(
   }
 );
 
+/**
+ * Admin: Get all coupons with donation + fundraiser details.
+ *
+ * @route GET /api/coupons/admin/all
+ * @access Private (admin only)
+ *
+ * @query {number} [page=1] - Page number
+ * @query {number} [limit=20] - Items per page
+ * @query {string} [search] - Search by coupon code / donor email / donor name
+ * @query {'active'|'used'|'expired'} [status] - Coupon status filter
+ * @query {string} [fundraiserId] - Fundraiser filter (ObjectId)
+ */
+const getAllCoupons = catchAsync(async (req: Request, res: Response) => {
+  const {
+    page = 1,
+    limit = 20,
+    search,
+    status,
+    fundraiserId,
+  } = req.query as Record<string, string>;
+
+  const result = await CouponService.getAllCoupons(
+    Number(page),
+    Number(limit),
+    {
+      search: search || undefined,
+      status:
+        (status as 'active' | 'used' | 'expired' | undefined) || undefined,
+      fundraiserId: fundraiserId || undefined,
+    }
+  );
+
+  return sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'All coupons retrieved successfully',
+    data: result.coupons,
+    meta: result.pagination,
+  });
+});
+
 export const CouponController = {
   getMyCoupons,
   getCouponByCode,
   getCouponStats,
   selectWinner,
   cleanupExpiredCoupons,
+  getAllCoupons,
 };

@@ -27,6 +27,12 @@ import {
   couponEmailTemplate,
 } from './templates/coupon.template';
 
+type TGetAllCouponsFilters = {
+  search?: string;
+  status?: 'active' | 'used' | 'expired';
+  fundraiserId?: string;
+};
+
 /**
  * Default coupon expiration period in days.
  */
@@ -399,6 +405,74 @@ const getCouponStats = async (fundraiserId?: string) => {
 };
 
 /**
+ * Admin: Get all coupons with donation + fundraiser details.
+ *
+ * @param {number} [page=1] - Page number
+ * @param {number} [limit=20] - Items per page
+ * @param {TGetAllCouponsFilters} [filters] - Optional filters
+ * @returns {Promise<object>} Paginated coupons list
+ */
+const getAllCoupons = async (
+  page: number = 1,
+  limit: number = 20,
+  filters?: TGetAllCouponsFilters
+) => {
+  const safePage = Math.max(1, Number(page) || 1);
+  const safeLimit = Math.max(1, Math.min(Number(limit) || 20, 100));
+  const skip = (safePage - 1) * safeLimit;
+
+  const query: Record<string, unknown> = {};
+
+  if (filters?.status) {
+    query.status = filters.status;
+  }
+
+  if (filters?.fundraiserId) {
+    query.fundraiser = filters.fundraiserId;
+  }
+
+  if (filters?.search) {
+    const term = String(filters.search).trim();
+    if (term) {
+      query.$or = [
+        { code: { $regex: term, $options: 'i' } },
+        { donorEmail: { $regex: term, $options: 'i' } },
+        { donorName: { $regex: term, $options: 'i' } },
+      ];
+    }
+  }
+
+  const [coupons, total] = await Promise.all([
+    Coupon.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(safeLimit)
+      .populate('fundraiser', 'title slug coverImage status owner')
+      .populate({
+        path: 'donation',
+        select:
+          'fundraiser donor amount tipAmount totalAmount currency paymentStatus paymentMethod transactionId isAnonymous donorName donorEmail createdAt',
+        populate: {
+          path: 'donor',
+          select: 'name email profilePicture',
+        },
+      })
+      .populate('user', 'name email profilePicture'),
+    Coupon.countDocuments(query),
+  ]);
+
+  return {
+    coupons,
+    pagination: {
+      page: safePage,
+      limit: safeLimit,
+      total,
+      totalPages: Math.ceil(total / safeLimit),
+    },
+  };
+};
+
+/**
  * Mark expired coupons.
  *
  * This should be run periodically (e.g., daily cron job)
@@ -426,5 +500,6 @@ export const CouponService = {
   getCouponByCode,
   selectRandomWinner,
   getCouponStats,
+  getAllCoupons,
   markExpiredCoupons,
 };
