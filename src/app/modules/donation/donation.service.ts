@@ -15,13 +15,15 @@ const createDonation = async (
     fundraiserId,
     amount,
     tipAmount = 0,
-    currency = 'USD',
+    currency = 'EUR',
     paymentMethod,
     isAnonymous = false,
     donorName,
     donorEmail,
     message,
   } = payload;
+
+  const normalizedCurrency = currency.toUpperCase();
 
   // Verify fundraiser exists and is published
   const fundraiser = await Fundraiser.findById(fundraiserId);
@@ -51,7 +53,7 @@ const createDonation = async (
           amount,
           tipAmount,
           totalAmount,
-          currency,
+          currency: normalizedCurrency,
           paymentMethod,
           paymentStatus: 'completed', // For now, mark as completed (integrate Stripe later)
           isAnonymous,
@@ -87,7 +89,7 @@ const createDonation = async (
           type: 'DONATION',
           fundraiserId,
           donationAmount: amount,
-          donationCurrency: currency,
+          donationCurrency: normalizedCurrency,
           isPublic: true,
         });
       } catch (activityError) {
@@ -106,7 +108,7 @@ const createDonation = async (
         donorEmail,
         donorName,
         donationAmount: amount,
-        currency,
+        currency: normalizedCurrency,
         fundraiserTitle: fundraiser.title,
       });
     } catch (couponError) {
@@ -286,7 +288,7 @@ const getMyImpactStats = async (donorId: string) => {
     totalImpact: totalDonated + totalTips,
     donationCount: donations.length,
     fundraisersSupported,
-    currency: 'USD',
+    currency: 'EUR',
   };
 };
 
@@ -322,6 +324,8 @@ const createDonationFromStripe = async (
     donorId,
   } = payload;
 
+  const normalizedCurrency = currency.toUpperCase();
+
   // Check if donation already exists (idempotency)
   const existingDonation = await Donation.findOne({ transactionId });
   if (existingDonation) {
@@ -350,7 +354,7 @@ const createDonationFromStripe = async (
           amount,
           tipAmount,
           totalAmount,
-          currency,
+          currency: normalizedCurrency,
           paymentMethod,
           paymentStatus,
           isAnonymous,
@@ -387,7 +391,7 @@ const createDonationFromStripe = async (
           type: 'DONATION',
           fundraiserId,
           donationAmount: amount,
-          donationCurrency: currency,
+          donationCurrency: normalizedCurrency,
           isPublic: true,
         });
       } catch (activityError) {
@@ -407,7 +411,7 @@ const createDonationFromStripe = async (
           donorEmail,
           donorName,
           donationAmount: amount,
-          currency,
+          currency: normalizedCurrency,
           fundraiserTitle: fundraiser.title,
         });
       } catch (couponError) {

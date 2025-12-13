@@ -115,7 +115,7 @@ const createCoupon = async (
     donorEmail,
     donorName,
     donationAmount,
-    currency = 'USD',
+    currency = 'EUR',
     fundraiserTitle,
   } = payload;
 
@@ -191,7 +191,7 @@ const createCoupon = async (
       to: donorEmail,
       subject: `🎉 Your Donation Coupon Code: ${code}`,
       html: emailHtml,
-      text: `Thank you for your donation of ${currency} ${donationAmount} to "${fundraiserTitle}"! Your coupon code is: ${code}. This code is valid until ${expiresAt.toDateString()}.`,
+      text: `Thank you for your donation of ${currency === 'EUR' ? '€' : currency + ' '}${donationAmount} to "${fundraiserTitle}"! Your coupon code is: ${code}. This code is valid until ${expiresAt.toDateString()}.`,
     });
 
     emailSent = true;

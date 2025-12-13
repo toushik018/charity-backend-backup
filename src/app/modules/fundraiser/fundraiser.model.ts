@@ -21,7 +21,7 @@ const fundraiserSchema = new Schema<IFundraiser>(
     gallery: { type: [String], default: [] },
     goalAmount: { type: Number, min: 0 },
     currentAmount: { type: Number, default: 0, min: 0 },
-    currency: { type: String, trim: true },
+    currency: { type: String, trim: true, default: 'EUR' },
     category: { type: String, trim: true },
     story: { type: String, trim: true },
     description: { type: String, trim: true },

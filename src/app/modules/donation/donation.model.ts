@@ -31,7 +31,7 @@ const donationSchema = new Schema<IDonation>(
     },
     currency: {
       type: String,
-      default: 'USD',
+      default: 'EUR',
       trim: true,
     },
     paymentMethod: {

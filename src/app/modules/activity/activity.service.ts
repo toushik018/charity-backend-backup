@@ -26,7 +26,7 @@ export const createActivity = async (
     type: payload.type,
     fundraiser: new Types.ObjectId(payload.fundraiserId),
     donationAmount: payload.donationAmount,
-    donationCurrency: payload.donationCurrency || 'USD',
+    donationCurrency: payload.donationCurrency || 'EUR',
     reactionType: payload.reactionType,
     isPublic: payload.isPublic ?? true,
   });

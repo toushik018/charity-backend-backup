@@ -29,7 +29,7 @@ const activitySchema = new Schema<IActivity>(
     donationCurrency: {
       type: String,
       trim: true,
-      default: 'USD',
+      default: 'EUR',
     },
     reactionType: {
       type: String,

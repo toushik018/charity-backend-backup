@@ -35,7 +35,7 @@ const createPaymentIntent = async (
   const {
     amount,
     tipAmount = 0,
-    currency = 'usd',
+    currency = 'eur',
     fundraiserId,
     fundraiserTitle,
     donorEmail,
@@ -58,7 +58,7 @@ const createPaymentIntent = async (
   if (amountInCents < 50) {
     throw new AppError(
       StatusCodes.BAD_REQUEST,
-      'Minimum donation amount is $0.50'
+      'Minimum donation amount is €0.50'
     );
   }
 

@@ -5,9 +5,9 @@ export const createDonationValidation = z.object({
     fundraiserId: z.string({ required_error: 'Fundraiser ID is required' }),
     amount: z
       .number({ required_error: 'Amount is required' })
-      .min(1, 'Minimum donation is $1'),
+      .min(1, 'Minimum donation is €1'),
     tipAmount: z.number().min(0).optional().default(0),
-    currency: z.string().optional().default('USD'),
+    currency: z.string().optional().default('EUR'),
     paymentMethod: z.enum(['card', 'bank', 'mobile'], {
       required_error: 'Payment method is required',
     }),
