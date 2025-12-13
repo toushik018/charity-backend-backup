@@ -81,6 +81,7 @@ const updateFundraiser = async (
   }
 
   await doc.save();
+  await doc.populate('owner', 'name email profilePicture');
   return doc;
 };
 
@@ -141,6 +142,7 @@ const getAllFundraisers = async (
 
   const [data, total] = await Promise.all([
     Fundraiser.find(query)
+      .populate('owner', 'name email profilePicture')
       .sort(sort)
       .skip(skip)
       .limit(limit)
@@ -248,7 +250,7 @@ const adminDeleteFundraiser = async (id: string): Promise<void> => {
 };
 
 const adminGetById = async (id: string): Promise<IFundraiser | null> => {
-  return Fundraiser.findById(id);
+  return Fundraiser.findById(id).populate('owner', 'name email profilePicture');
 };
 
 export const FundraiserService = {
