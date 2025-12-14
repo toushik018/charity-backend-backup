@@ -101,6 +101,11 @@ const getAllDonations = catchAsync(async (req: Request, res: Response) => {
     limit = 20,
     paymentStatus,
     searchTerm,
+    fundraiserId,
+    donorId,
+    currency,
+    paymentMethod,
+    isAnonymous,
     minAmount,
     maxAmount,
     fromDate,
@@ -110,12 +115,21 @@ const getAllDonations = catchAsync(async (req: Request, res: Response) => {
   const min = typeof minAmount === 'string' ? Number(minAmount) : undefined;
   const max = typeof maxAmount === 'string' ? Number(maxAmount) : undefined;
 
+  let isAnonymousBool: boolean | undefined = undefined;
+  if (isAnonymous === 'true') isAnonymousBool = true;
+  if (isAnonymous === 'false') isAnonymousBool = false;
+
   const result = await DonationService.getAllDonations(
     Number(page),
     Number(limit),
     {
       paymentStatus: paymentStatus ? String(paymentStatus) : undefined,
       searchTerm: searchTerm ? String(searchTerm) : undefined,
+      fundraiserId: fundraiserId ? String(fundraiserId) : undefined,
+      donorId: donorId ? String(donorId) : undefined,
+      currency: currency ? String(currency) : undefined,
+      paymentMethod: paymentMethod ? String(paymentMethod) : undefined,
+      isAnonymous: isAnonymousBool,
       minAmount: Number.isFinite(min as number) ? (min as number) : undefined,
       maxAmount: Number.isFinite(max as number) ? (max as number) : undefined,
       fromDate: fromDate ? String(fromDate) : undefined,

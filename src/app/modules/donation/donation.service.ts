@@ -10,6 +10,11 @@ import { Donation } from './donation.model';
 interface AdminDonationListFilters {
   paymentStatus?: string;
   searchTerm?: string;
+  fundraiserId?: string;
+  donorId?: string;
+  currency?: string;
+  paymentMethod?: string;
+  isAnonymous?: boolean;
   minAmount?: number;
   maxAmount?: number;
   fromDate?: string;
@@ -236,6 +241,39 @@ const getAllDonations = async (
   const skip = (page - 1) * limit;
 
   const query: Record<string, unknown> = {};
+
+  if (filters.fundraiserId) {
+    if (mongoose.Types.ObjectId.isValid(filters.fundraiserId)) {
+      query.fundraiser = filters.fundraiserId;
+    } else {
+      query._id = { $exists: false };
+    }
+  }
+
+  if (filters.donorId) {
+    if (mongoose.Types.ObjectId.isValid(filters.donorId)) {
+      query.donor = filters.donorId;
+    } else {
+      query._id = { $exists: false };
+    }
+  }
+
+  if (filters.currency) {
+    const currency = String(filters.currency).trim().toUpperCase();
+    if (currency) query.currency = currency;
+  }
+
+  if (filters.paymentMethod) {
+    const method = String(filters.paymentMethod).trim();
+    const allowed = ['card', 'bank', 'mobile'] as const;
+    if ((allowed as readonly string[]).includes(method)) {
+      query.paymentMethod = method;
+    }
+  }
+
+  if (typeof filters.isAnonymous === 'boolean') {
+    query.isAnonymous = filters.isAnonymous;
+  }
 
   if (filters.paymentStatus) {
     query.paymentStatus = filters.paymentStatus;
