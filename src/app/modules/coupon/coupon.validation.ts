@@ -100,6 +100,29 @@ export const getAllCouponsSchema = z.object({
       .string()
       .regex(/^[a-fA-F0-9]{24}$/, 'Invalid fundraiser ID format')
       .optional(),
+
+    minAmount: z
+      .string()
+      .regex(/^\d+(\.\d+)?$/, 'minAmount must be a valid number')
+      .optional(),
+    maxAmount: z
+      .string()
+      .regex(/^\d+(\.\d+)?$/, 'maxAmount must be a valid number')
+      .optional(),
+    fromDate: z
+      .string()
+      .datetime({ message: 'Invalid date format' })
+      .optional(),
+    toDate: z.string().datetime({ message: 'Invalid date format' }).optional(),
+  }),
+});
+
+/**
+ * Validation schema for admin: get a single coupon by id.
+ */
+export const getCouponByIdSchema = z.object({
+  params: z.object({
+    couponId: z.string().regex(/^[a-fA-F0-9]{24}$/, 'Invalid coupon ID format'),
   }),
 });
 
@@ -109,4 +132,5 @@ export const CouponValidation = {
   getCouponByCodeSchema,
   getCouponStatsSchema,
   getAllCouponsSchema,
+  getCouponByIdSchema,
 };

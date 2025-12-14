@@ -31,6 +31,10 @@ type TGetAllCouponsFilters = {
   search?: string;
   status?: 'active' | 'used' | 'expired';
   fundraiserId?: string;
+  minAmount?: number;
+  maxAmount?: number;
+  fromDate?: Date;
+  toDate?: Date;
 };
 
 /**
@@ -442,6 +446,34 @@ const getAllCoupons = async (
     }
   }
 
+  if (typeof filters?.minAmount === 'number') {
+    query.donationAmount = {
+      ...((query.donationAmount as object) || {}),
+      $gte: filters.minAmount,
+    };
+  }
+
+  if (typeof filters?.maxAmount === 'number') {
+    query.donationAmount = {
+      ...((query.donationAmount as object) || {}),
+      $lte: filters.maxAmount,
+    };
+  }
+
+  if (filters?.fromDate) {
+    query.createdAt = {
+      ...((query.createdAt as object) || {}),
+      $gte: filters.fromDate,
+    };
+  }
+
+  if (filters?.toDate) {
+    query.createdAt = {
+      ...((query.createdAt as object) || {}),
+      $lte: filters.toDate,
+    };
+  }
+
   const [coupons, total] = await Promise.all([
     Coupon.find(query)
       .sort({ createdAt: -1 })
@@ -473,6 +505,30 @@ const getAllCoupons = async (
 };
 
 /**
+ * Admin: Get a single coupon by id.
+ */
+const getCouponById = async (couponId: string) => {
+  const coupon = await Coupon.findById(couponId)
+    .populate('fundraiser', 'title slug coverImage status owner')
+    .populate({
+      path: 'donation',
+      select:
+        'fundraiser donor amount tipAmount totalAmount currency paymentStatus paymentMethod transactionId isAnonymous donorName donorEmail createdAt',
+      populate: {
+        path: 'donor',
+        select: 'name email profilePicture',
+      },
+    })
+    .populate('user', 'name email profilePicture');
+
+  if (!coupon) {
+    throw new AppError(StatusCodes.NOT_FOUND, 'Coupon not found');
+  }
+
+  return coupon;
+};
+
+/**
  * Mark expired coupons.
  *
  * This should be run periodically (e.g., daily cron job)
@@ -501,5 +557,6 @@ export const CouponService = {
   selectRandomWinner,
   getCouponStats,
   getAllCoupons,
+  getCouponById,
   markExpiredCoupons,
 };

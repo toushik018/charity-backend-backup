@@ -55,6 +55,21 @@ const getMyCoupons = catchAsync(async (req: AuthRequest, res: Response) => {
 });
 
 /**
+ * Admin: Get a single coupon by id.
+ */
+const getCouponById = catchAsync(async (req: Request, res: Response) => {
+  const { couponId } = req.params;
+  const result = await CouponService.getCouponById(couponId);
+
+  return sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Coupon retrieved successfully',
+    data: result,
+  });
+});
+
+/**
  * Get a single coupon by its code.
  *
  * @route GET /api/coupons/code/:code
@@ -189,6 +204,10 @@ const getAllCoupons = catchAsync(async (req: Request, res: Response) => {
     search,
     status,
     fundraiserId,
+    minAmount,
+    maxAmount,
+    fromDate,
+    toDate,
   } = req.query as Record<string, string>;
 
   const result = await CouponService.getAllCoupons(
@@ -199,6 +218,10 @@ const getAllCoupons = catchAsync(async (req: Request, res: Response) => {
       status:
         (status as 'active' | 'used' | 'expired' | undefined) || undefined,
       fundraiserId: fundraiserId || undefined,
+      minAmount: minAmount ? Number(minAmount) : undefined,
+      maxAmount: maxAmount ? Number(maxAmount) : undefined,
+      fromDate: fromDate ? new Date(fromDate) : undefined,
+      toDate: toDate ? new Date(toDate) : undefined,
     }
   );
 
@@ -218,4 +241,5 @@ export const CouponController = {
   selectWinner,
   cleanupExpiredCoupons,
   getAllCoupons,
+  getCouponById,
 };
