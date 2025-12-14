@@ -17,6 +17,19 @@ const createDonation = catchAsync(async (req: AuthRequest, res: Response) => {
   });
 });
 
+// Admin: Get donation by id
+const getDonationById = catchAsync(async (req: Request, res: Response) => {
+  const { donationId } = req.params;
+  const result = await DonationService.getDonationById(donationId);
+
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Donation retrieved successfully',
+    data: result,
+  });
+});
+
 const getDonationsByFundraiser = catchAsync(
   async (req: AuthRequest, res: Response) => {
     const { fundraiserId } = req.params;
@@ -83,10 +96,14 @@ const getMyImpactStats = catchAsync(async (req: AuthRequest, res: Response) => {
 
 // Admin: Get all donations
 const getAllDonations = catchAsync(async (req: Request, res: Response) => {
-  const { page = 1, limit = 20 } = req.query;
+  const { page = 1, limit = 20, paymentStatus, searchTerm } = req.query;
   const result = await DonationService.getAllDonations(
     Number(page),
-    Number(limit)
+    Number(limit),
+    {
+      paymentStatus: paymentStatus ? String(paymentStatus) : undefined,
+      searchTerm: searchTerm ? String(searchTerm) : undefined,
+    }
   );
 
   sendResponse(res, {
@@ -130,6 +147,7 @@ export const DonationController = {
   getMyDonations,
   getMyImpactStats,
   getAllDonations,
+  getDonationById,
   getDonationStats,
   deleteDonation,
 };

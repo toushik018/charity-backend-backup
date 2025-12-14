@@ -7,6 +7,11 @@ import { Fundraiser } from '../fundraiser/fundraiser.model';
 import { TCreateDonationPayload } from './donation.interface';
 import { Donation } from './donation.model';
 
+interface AdminDonationListFilters {
+  paymentStatus?: string;
+  searchTerm?: string;
+}
+
 const createDonation = async (
   payload: TCreateDonationPayload,
   donorId?: string
@@ -133,6 +138,19 @@ const createDonation = async (
   }
 };
 
+// Admin: Get donation by id
+const getDonationById = async (donationId: string) => {
+  const donation = await Donation.findById(donationId)
+    .populate('fundraiser', 'title slug coverImage')
+    .populate('donor', 'name email profilePicture');
+
+  if (!donation) {
+    throw new AppError(StatusCodes.NOT_FOUND, 'Donation not found');
+  }
+
+  return donation;
+};
+
 const getDonationsByFundraiser = async (
   fundraiserId: string,
   page = 1,
@@ -206,17 +224,38 @@ const getMyDonations = async (donorId: string, page = 1, limit = 20) => {
 };
 
 // Admin: Get all donations
-const getAllDonations = async (page = 1, limit = 20) => {
+const getAllDonations = async (
+  page = 1,
+  limit = 20,
+  filters: AdminDonationListFilters = {}
+) => {
   const skip = (page - 1) * limit;
 
-  const donations = await Donation.find()
+  const query: Record<string, unknown> = {};
+
+  if (filters.paymentStatus) {
+    query.paymentStatus = filters.paymentStatus;
+  }
+
+  if (filters.searchTerm) {
+    const term = String(filters.searchTerm).trim();
+    if (term) {
+      query.$or = [
+        { donorName: { $regex: term, $options: 'i' } },
+        { donorEmail: { $regex: term, $options: 'i' } },
+        { transactionId: { $regex: term, $options: 'i' } },
+      ];
+    }
+  }
+
+  const donations = await Donation.find(query)
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit)
     .populate('fundraiser', 'title slug coverImage')
     .populate('donor', 'name email profilePicture');
 
-  const total = await Donation.countDocuments();
+  const total = await Donation.countDocuments(query);
 
   return {
     donations,
@@ -437,6 +476,7 @@ export const DonationService = {
   getMyDonations,
   getMyImpactStats,
   getAllDonations,
+  getDonationById,
   getDonationStats,
   deleteDonation,
 };

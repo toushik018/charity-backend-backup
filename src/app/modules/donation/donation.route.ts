@@ -54,6 +54,13 @@ router.get('/admin/all', auth('admin'), DonationController.getAllDonations);
 // Admin: Get donation stats
 router.get('/admin/stats', auth('admin'), DonationController.getDonationStats);
 
+// Admin: Get donation by id
+router.get(
+  '/admin/:donationId',
+  auth('admin'),
+  DonationController.getDonationById
+);
+
 // Admin: Delete donation
 router.delete(
   '/admin/:donationId',
