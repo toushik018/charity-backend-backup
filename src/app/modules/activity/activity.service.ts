@@ -1,4 +1,6 @@
 import { Types } from 'mongoose';
+import { Fundraiser } from '../fundraiser/fundraiser.model';
+import { User } from '../user/user.model';
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from './activity.constant';
 import { IActivity, TActivityType } from './activity.interface';
 import { Activity } from './activity.model';
@@ -16,6 +18,18 @@ interface CreateActivityPayload {
 interface GetActivitiesOptions {
   page?: number;
   limit?: number;
+  filters?: AdminActivityListFilters;
+}
+
+interface AdminActivityListFilters {
+  searchTerm?: string;
+  type?: TActivityType;
+  isPublic?: boolean;
+  userId?: string;
+  fundraiserId?: string;
+  reactionType?: string;
+  fromDate?: string;
+  toDate?: string;
 }
 
 export const createActivity = async (
@@ -165,15 +179,113 @@ export const getAllActivities = async (options: GetActivitiesOptions = {}) => {
   );
   const skip = (page - 1) * limit;
 
+  const filters = options.filters || {};
+  const andConditions: Record<string, unknown>[] = [];
+
+  if (filters.type) {
+    andConditions.push({ type: filters.type });
+  }
+
+  if (typeof filters.isPublic === 'boolean') {
+    andConditions.push({ isPublic: filters.isPublic });
+  }
+
+  if (filters.userId && Types.ObjectId.isValid(filters.userId)) {
+    andConditions.push({ user: new Types.ObjectId(filters.userId) });
+  }
+
+  if (filters.fundraiserId && Types.ObjectId.isValid(filters.fundraiserId)) {
+    andConditions.push({
+      fundraiser: new Types.ObjectId(filters.fundraiserId),
+    });
+  }
+
+  if (filters.reactionType) {
+    const rt = String(filters.reactionType).trim();
+    if (rt) {
+      andConditions.push({ reactionType: { $regex: rt, $options: 'i' } });
+    }
+  }
+
+  if (filters.fromDate || filters.toDate) {
+    const createdAt: Record<string, Date> = {};
+
+    if (filters.fromDate) {
+      const d = new Date(filters.fromDate);
+      if (!Number.isNaN(d.getTime())) createdAt.$gte = d;
+    }
+
+    if (filters.toDate) {
+      const d = new Date(filters.toDate);
+      if (!Number.isNaN(d.getTime())) createdAt.$lte = d;
+    }
+
+    if (Object.keys(createdAt).length) {
+      andConditions.push({ createdAt });
+    }
+  }
+
+  const term = String(filters.searchTerm || '').trim();
+  if (term) {
+    const orConditions: Record<string, unknown>[] = [];
+
+    // Only search users when a specific userId filter is not already applied.
+    if (!filters.userId) {
+      const users = await User.find({
+        $or: [
+          { name: { $regex: term, $options: 'i' } },
+          { email: { $regex: term, $options: 'i' } },
+        ],
+      })
+        .select('_id')
+        .limit(50)
+        .lean();
+
+      const userIds = users.map((u) => u._id);
+      if (userIds.length) {
+        orConditions.push({ user: { $in: userIds } });
+      }
+    }
+
+    // Only search fundraisers when a specific fundraiserId filter is not already applied.
+    if (!filters.fundraiserId) {
+      const fundraisers = await Fundraiser.find({
+        $or: [
+          { title: { $regex: term, $options: 'i' } },
+          { slug: { $regex: term, $options: 'i' } },
+        ],
+      })
+        .select('_id')
+        .limit(50)
+        .lean();
+
+      const fundraiserIds = fundraisers.map((f) => f._id);
+      if (fundraiserIds.length) {
+        orConditions.push({ fundraiser: { $in: fundraiserIds } });
+      }
+    }
+
+    // If reactionType isn't explicitly filtered, allow search to match it.
+    if (!filters.reactionType) {
+      orConditions.push({ reactionType: { $regex: term, $options: 'i' } });
+    }
+
+    if (orConditions.length) {
+      andConditions.push({ $or: orConditions });
+    }
+  }
+
+  const query = andConditions.length ? { $and: andConditions } : {};
+
   const [activities, total] = await Promise.all([
-    Activity.find()
+    Activity.find(query)
       .populate('user', 'name email profilePicture')
       .populate('fundraiser', 'title slug coverImage')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .lean(),
-    Activity.countDocuments(),
+    Activity.countDocuments(query),
   ]);
 
   return {

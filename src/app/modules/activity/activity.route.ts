@@ -4,6 +4,7 @@ import { validateRequest } from '../../middlewares/validateRequest';
 import { ActivityController } from './activity.controller';
 import {
   createActivityValidation,
+  getAdminActivitiesValidation,
   getFundraiserActivitiesValidation,
   getMyActivitiesValidation,
   getUserActivitiesValidation,
@@ -42,7 +43,12 @@ router.get(
 );
 
 // Admin: Get all activities
-router.get('/admin/all', auth('admin'), ActivityController.getAllActivities);
+router.get(
+  '/admin/all',
+  auth('admin'),
+  validateRequest(getAdminActivitiesValidation),
+  ActivityController.getAllActivities
+);
 
 // Admin: Delete activity
 router.delete(

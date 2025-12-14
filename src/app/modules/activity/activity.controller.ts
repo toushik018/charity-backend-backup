@@ -128,10 +128,37 @@ const getFundraiserActivitiesController = catchAsync(
 // Admin: Get all activities
 const getAllActivitiesController = catchAsync(
   async (req: AuthRequest, res: Response) => {
-    const { page, limit } = req.query as Record<string, string>;
+    const {
+      page,
+      limit,
+      searchTerm,
+      type,
+      isPublic,
+      userId,
+      fundraiserId,
+      reactionType,
+      fromDate,
+      toDate,
+    } = req.query as Record<string, string | undefined>;
+
     const options = {
       page: page ? Number(page) : undefined,
       limit: limit ? Number(limit) : undefined,
+      filters: {
+        searchTerm: searchTerm ? String(searchTerm) : undefined,
+        type: type ? (String(type) as TActivityType) : undefined,
+        isPublic:
+          typeof isPublic === 'string'
+            ? String(isPublic) === 'true'
+              ? true
+              : false
+            : undefined,
+        userId: userId ? String(userId) : undefined,
+        fundraiserId: fundraiserId ? String(fundraiserId) : undefined,
+        reactionType: reactionType ? String(reactionType) : undefined,
+        fromDate: fromDate ? String(fromDate) : undefined,
+        toDate: toDate ? String(toDate) : undefined,
+      },
     };
 
     const result = await getAllActivities(options);

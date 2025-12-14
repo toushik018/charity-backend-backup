@@ -43,3 +43,25 @@ export const getFundraiserActivitiesValidation = z.object({
     limit: z.string().optional(),
   }),
 });
+
+export const getAdminActivitiesValidation = z.object({
+  query: z.object({
+    page: z.string().optional(),
+    limit: z.string().optional(),
+    searchTerm: z.string().optional(),
+    type: z
+      .enum([
+        ACTIVITY_TYPES.DONATION,
+        ACTIVITY_TYPES.REACTION,
+        ACTIVITY_TYPES.FUNDRAISER_CREATED,
+        ACTIVITY_TYPES.SHARE,
+      ])
+      .optional(),
+    isPublic: z.enum(['true', 'false']).optional(),
+    userId: z.string().optional(),
+    fundraiserId: z.string().optional(),
+    reactionType: z.string().optional(),
+    fromDate: z.string().optional(),
+    toDate: z.string().optional(),
+  }),
+});
