@@ -10,6 +10,10 @@ import { Donation } from './donation.model';
 interface AdminDonationListFilters {
   paymentStatus?: string;
   searchTerm?: string;
+  minAmount?: number;
+  maxAmount?: number;
+  fromDate?: string;
+  toDate?: string;
 }
 
 const createDonation = async (
@@ -245,6 +249,31 @@ const getAllDonations = async (
         { donorEmail: { $regex: term, $options: 'i' } },
         { transactionId: { $regex: term, $options: 'i' } },
       ];
+    }
+  }
+
+  if (
+    typeof filters.minAmount === 'number' ||
+    typeof filters.maxAmount === 'number'
+  ) {
+    const amount: Record<string, number> = {};
+    if (typeof filters.minAmount === 'number') amount.$gte = filters.minAmount;
+    if (typeof filters.maxAmount === 'number') amount.$lte = filters.maxAmount;
+    query.amount = amount;
+  }
+
+  if (filters.fromDate || filters.toDate) {
+    const createdAt: Record<string, Date> = {};
+    if (filters.fromDate) {
+      const d = new Date(filters.fromDate);
+      if (!Number.isNaN(d.getTime())) createdAt.$gte = d;
+    }
+    if (filters.toDate) {
+      const d = new Date(filters.toDate);
+      if (!Number.isNaN(d.getTime())) createdAt.$lte = d;
+    }
+    if (Object.keys(createdAt).length) {
+      query.createdAt = createdAt;
     }
   }
 

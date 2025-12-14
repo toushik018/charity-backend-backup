@@ -43,3 +43,16 @@ export const getMyDonationsQueryValidation = z.object({
     limit: z.string().optional(),
   }),
 });
+
+export const getAdminDonationsQueryValidation = z.object({
+  query: z.object({
+    page: z.string().optional(),
+    limit: z.string().optional(),
+    paymentStatus: z.string().optional(),
+    searchTerm: z.string().optional(),
+    minAmount: z.string().optional(),
+    maxAmount: z.string().optional(),
+    fromDate: z.string().optional(),
+    toDate: z.string().optional(),
+  }),
+});

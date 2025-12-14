@@ -96,13 +96,30 @@ const getMyImpactStats = catchAsync(async (req: AuthRequest, res: Response) => {
 
 // Admin: Get all donations
 const getAllDonations = catchAsync(async (req: Request, res: Response) => {
-  const { page = 1, limit = 20, paymentStatus, searchTerm } = req.query;
+  const {
+    page = 1,
+    limit = 20,
+    paymentStatus,
+    searchTerm,
+    minAmount,
+    maxAmount,
+    fromDate,
+    toDate,
+  } = req.query;
+
+  const min = typeof minAmount === 'string' ? Number(minAmount) : undefined;
+  const max = typeof maxAmount === 'string' ? Number(maxAmount) : undefined;
+
   const result = await DonationService.getAllDonations(
     Number(page),
     Number(limit),
     {
       paymentStatus: paymentStatus ? String(paymentStatus) : undefined,
       searchTerm: searchTerm ? String(searchTerm) : undefined,
+      minAmount: Number.isFinite(min as number) ? (min as number) : undefined,
+      maxAmount: Number.isFinite(max as number) ? (max as number) : undefined,
+      fromDate: fromDate ? String(fromDate) : undefined,
+      toDate: toDate ? String(toDate) : undefined,
     }
   );
 

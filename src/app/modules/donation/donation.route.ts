@@ -4,6 +4,7 @@ import { validateRequest } from '../../middlewares/validateRequest';
 import { DonationController } from './donation.controller';
 import {
   createDonationValidation,
+  getAdminDonationsQueryValidation,
   getDonationsQueryValidation,
   getMyDonationsQueryValidation,
   getTopDonationsQueryValidation,
@@ -49,7 +50,12 @@ router.get(
 );
 
 // Admin: Get all donations
-router.get('/admin/all', auth('admin'), DonationController.getAllDonations);
+router.get(
+  '/admin/all',
+  auth('admin'),
+  validateRequest(getAdminDonationsQueryValidation),
+  DonationController.getAllDonations
+);
 
 // Admin: Get donation stats
 router.get('/admin/stats', auth('admin'), DonationController.getDonationStats);
