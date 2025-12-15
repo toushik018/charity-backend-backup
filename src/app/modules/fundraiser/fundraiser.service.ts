@@ -1,6 +1,7 @@
 import { StatusCodes } from 'http-status-codes';
 import { FilterQuery } from 'mongoose';
 import AppError from '../../error/AppError';
+import { User } from '../user/user.model';
 import type { TListOptions } from '../user/user.service';
 import {
   IFundraiser,
@@ -134,6 +135,23 @@ const getAllFundraisers = async (
   } = options || {};
 
   const query: FilterQuery<IFundraiser> = buildFundraiserQuery(filters);
+  if (filters.searchTerm) {
+    const regex = new RegExp(filters.searchTerm, 'i');
+    const ownerMatches = await User.find({
+      $or: [{ name: { $regex: regex } }, { email: { $regex: regex } }],
+    })
+      .select('_id')
+      .lean();
+
+    if (ownerMatches.length > 0) {
+      query.$or = [
+        ...((Array.isArray(query.$or)
+          ? query.$or
+          : []) as FilterQuery<IFundraiser>[]),
+        { owner: { $in: ownerMatches.map((u) => u._id) } },
+      ];
+    }
+  }
 
   const skip = (page - 1) * limit;
   const sort: Record<string, 1 | -1> = {
