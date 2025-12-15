@@ -1,4 +1,9 @@
 import { z } from 'zod';
+import {
+  zIntFromString,
+  zObjectId,
+  zOptionalBooleanFromString,
+} from '../../utils/zod';
 
 export const updateUserValidation = z.object({
   body: z
@@ -29,9 +34,7 @@ export const updateUserValidation = z.object({
       path: [],
     }),
   params: z.object({
-    userId: z
-      .string({ required_error: 'userId is required' })
-      .regex(/^[0-9a-fA-F]{24}$/),
+    userId: zObjectId({ requiredError: 'userId is required' }),
   }),
 });
 
@@ -43,28 +46,9 @@ export const getUsersQueryValidation = z.object({
       .transform((val) => (val === '' ? undefined : val))
       .pipe(z.enum(['user', 'admin']).optional())
       .optional(),
-    isActive: z
-      .string()
-      .transform((val) =>
-        val === ''
-          ? undefined
-          : val === 'true'
-            ? true
-            : val === 'false'
-              ? false
-              : undefined
-      )
-      .optional() as unknown as z.ZodOptional<z.ZodBoolean>,
-    page: z
-      .string()
-      .transform((v) => Number(v))
-      .pipe(z.number().int().min(1))
-      .optional(),
-    limit: z
-      .string()
-      .transform((v) => Number(v))
-      .pipe(z.number().int().min(1).max(100))
-      .optional(),
+    isActive: zOptionalBooleanFromString(),
+    page: zIntFromString({ min: 1 }).optional(),
+    limit: zIntFromString({ min: 1, max: 100 }).optional(),
     sortBy: z.string().optional(),
     sortOrder: z.enum(['asc', 'desc']).optional(),
   }),
@@ -72,9 +56,7 @@ export const getUsersQueryValidation = z.object({
 
 export const getUserByIdParamValidation = z.object({
   params: z.object({
-    userId: z
-      .string({ required_error: 'userId is required' })
-      .regex(/^[0-9a-fA-F]{24}$/),
+    userId: zObjectId({ requiredError: 'userId is required' }),
   }),
 });
 
@@ -137,7 +119,7 @@ export const createUserValidation = z.object({
 export const updateHighlightsValidation = z.object({
   body: z.object({
     fundraiserIds: z
-      .array(z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid fundraiser id'))
+      .array(zObjectId({ invalidMessage: 'Invalid fundraiser id' }))
       .max(10)
       .optional(),
   }),
