@@ -1,6 +1,13 @@
 import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { catchAsync } from '../../utils/catchAsync';
+import {
+  parseBooleanQuery,
+  parseIntQuery,
+  parseNumberQuery,
+  parsePaginationQuery,
+  parseRawStringQuery,
+} from '../../utils/request';
 import { sendResponse } from '../../utils/sendResponse';
 import { AuthRequest } from '../auth/auth.interface';
 import { DonationService } from './donation.service';
@@ -33,8 +40,10 @@ const getDonationById = catchAsync(async (req: Request, res: Response) => {
 const getDonationsByFundraiser = catchAsync(
   async (req: AuthRequest, res: Response) => {
     const { fundraiserId } = req.params;
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
+    const { page, limit } = parsePaginationQuery(
+      req.query as Record<string, unknown>,
+      { page: 1, limit: 20 }
+    );
 
     const result = await DonationService.getDonationsByFundraiser(
       fundraiserId,
@@ -54,7 +63,8 @@ const getDonationsByFundraiser = catchAsync(
 
 const getTopDonations = catchAsync(async (req: AuthRequest, res: Response) => {
   const { fundraiserId } = req.params;
-  const limit = parseInt(req.query.limit as string) || 10;
+  const limit =
+    parseIntQuery((req.query as Record<string, unknown>).limit) || 10;
 
   const result = await DonationService.getTopDonations(fundraiserId, limit);
 
@@ -68,8 +78,10 @@ const getTopDonations = catchAsync(async (req: AuthRequest, res: Response) => {
 
 const getMyDonations = catchAsync(async (req: AuthRequest, res: Response) => {
   const donorId = req.user!.userId;
-  const page = parseInt(req.query.page as string) || 1;
-  const limit = parseInt(req.query.limit as string) || 20;
+  const { page, limit } = parsePaginationQuery(
+    req.query as Record<string, unknown>,
+    { page: 1, limit: 20 }
+  );
 
   const result = await DonationService.getMyDonations(donorId, page, limit);
 
@@ -96,46 +108,28 @@ const getMyImpactStats = catchAsync(async (req: AuthRequest, res: Response) => {
 
 // Admin: Get all donations
 const getAllDonations = catchAsync(async (req: Request, res: Response) => {
-  const {
-    page = 1,
-    limit = 20,
-    paymentStatus,
-    searchTerm,
-    fundraiserId,
-    donorId,
-    currency,
-    paymentMethod,
-    isAnonymous,
-    minAmount,
-    maxAmount,
-    fromDate,
-    toDate,
-  } = req.query;
+  const query = req.query as Record<string, unknown>;
 
-  const min = typeof minAmount === 'string' ? Number(minAmount) : undefined;
-  const max = typeof maxAmount === 'string' ? Number(maxAmount) : undefined;
+  const { page, limit } = parsePaginationQuery(query, { page: 1, limit: 20 });
 
-  let isAnonymousBool: boolean | undefined = undefined;
-  if (isAnonymous === 'true') isAnonymousBool = true;
-  if (isAnonymous === 'false') isAnonymousBool = false;
+  const min = parseNumberQuery(query.minAmount);
+  const max = parseNumberQuery(query.maxAmount);
 
-  const result = await DonationService.getAllDonations(
-    Number(page),
-    Number(limit),
-    {
-      paymentStatus: paymentStatus ? String(paymentStatus) : undefined,
-      searchTerm: searchTerm ? String(searchTerm) : undefined,
-      fundraiserId: fundraiserId ? String(fundraiserId) : undefined,
-      donorId: donorId ? String(donorId) : undefined,
-      currency: currency ? String(currency) : undefined,
-      paymentMethod: paymentMethod ? String(paymentMethod) : undefined,
-      isAnonymous: isAnonymousBool,
-      minAmount: Number.isFinite(min as number) ? (min as number) : undefined,
-      maxAmount: Number.isFinite(max as number) ? (max as number) : undefined,
-      fromDate: fromDate ? String(fromDate) : undefined,
-      toDate: toDate ? String(toDate) : undefined,
-    }
-  );
+  const isAnonymousBool = parseBooleanQuery(query.isAnonymous);
+
+  const result = await DonationService.getAllDonations(page, limit, {
+    paymentStatus: parseRawStringQuery(query.paymentStatus) || undefined,
+    searchTerm: parseRawStringQuery(query.searchTerm) || undefined,
+    fundraiserId: parseRawStringQuery(query.fundraiserId) || undefined,
+    donorId: parseRawStringQuery(query.donorId) || undefined,
+    currency: parseRawStringQuery(query.currency) || undefined,
+    paymentMethod: parseRawStringQuery(query.paymentMethod) || undefined,
+    isAnonymous: isAnonymousBool,
+    minAmount: min,
+    maxAmount: max,
+    fromDate: parseRawStringQuery(query.fromDate) || undefined,
+    toDate: parseRawStringQuery(query.toDate) || undefined,
+  });
 
   sendResponse(res, {
     statusCode: StatusCodes.OK,

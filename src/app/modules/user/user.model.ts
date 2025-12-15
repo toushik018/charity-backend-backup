@@ -1,18 +1,75 @@
+/**
+ * @fileoverview User Mongoose model.
+ *
+ * Defines the MongoDB schema and model for user documents,
+ * including authentication methods, password hashing, and indexes.
+ *
+ * @module modules/user/model
+ */
+
 import bcrypt from 'bcrypt';
 import { Document, Model, model, Schema, Types } from 'mongoose';
+
 import config from '../../config';
 import { TUser } from './user.interface';
 
+/* -------------------------------------------------------------------------- */
+/*                              INTERFACES                                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * User document interface.
+ *
+ * Extends the base TUser type with Mongoose Document properties.
+ */
 export interface IUserDocument extends TUser, Document {
+  /**
+   * Unique identifier.
+   */
   _id: Types.ObjectId;
+
+  /**
+   * Virtual username derived from email.
+   */
   username?: string;
+
+  /**
+   * Profile picture URL.
+   */
   profilePicture?: string;
+
+  /**
+   * User biography.
+   */
   bio?: string;
+
+  /**
+   * Cover/banner image URL.
+   */
   coverImage?: string;
 }
 
+/**
+ * User model interface with static methods.
+ *
+ * Defines custom static methods available on the User model.
+ */
 export interface IUserModel extends Model<IUserDocument> {
+  /**
+   * Finds a user by email address.
+   *
+   * @param _email - Email address to search for
+   * @returns User document with password field included, or null
+   */
   isUserExistsByEmail(_email: string): Promise<IUserDocument | null>;
+
+  /**
+   * Compares a plain password with a hashed password.
+   *
+   * @param _givenPassword - Plain text password to verify
+   * @param _savedHashedPassword - Hashed password from database
+   * @returns True if passwords match
+   */
   isPasswordMatched(
     _givenPassword: string,
     _savedHashedPassword: string

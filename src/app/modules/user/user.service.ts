@@ -6,9 +6,9 @@ import { Activity } from '../activity/activity.model';
 import { Coupon } from '../coupon/coupon.model';
 import { Donation } from '../donation/donation.model';
 import { Fundraiser } from '../fundraiser/fundraiser.model';
-import { TProfile, TUser, TUserRole } from './user.interface';
+import { TProfile, TUser, TUserFilters, TUserRole } from './user.interface';
 import { IUserDocument, User } from './user.model';
-import { TUserFilters, buildUserQuery } from './user.utils';
+import { buildUserQuery } from './user.utils';
 
 export type TListOptions = {
   page?: number;

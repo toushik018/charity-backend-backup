@@ -2,6 +2,10 @@ import { Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import AppError from '../../error/AppError';
 import { catchAsync } from '../../utils/catchAsync';
+import {
+  parseListOptionsQuery,
+  parseRawStringQuery,
+} from '../../utils/request';
 import { sendResponse } from '../../utils/sendResponse';
 import { AuthRequest } from '../auth/auth.interface';
 import { FundraiserService } from './fundraiser.service';
@@ -69,30 +73,16 @@ const getBySlug = catchAsync(async (req: AuthRequest, res: Response) => {
 });
 
 const getPublic = catchAsync(async (req: AuthRequest, res: Response) => {
-  const {
-    searchTerm,
-    owner,
-    category,
-    country,
-    page,
-    limit,
-    sortBy,
-    sortOrder,
-  } = req.query as Record<string, string>;
+  const query = req.query as Record<string, unknown>;
 
   const filters = {
-    searchTerm,
-    owner,
-    category,
-    country,
+    searchTerm: parseRawStringQuery(query.searchTerm),
+    owner: parseRawStringQuery(query.owner),
+    category: parseRawStringQuery(query.category),
+    country: parseRawStringQuery(query.country),
   };
 
-  const options = {
-    page: page ? Number(page) : undefined,
-    limit: limit ? Number(limit) : undefined,
-    sortBy,
-    sortOrder: sortOrder as 'asc' | 'desc' | undefined,
-  };
+  const options = parseListOptionsQuery(query);
 
   const result = await FundraiserService.getPublicFundraisers(filters, options);
 
@@ -114,32 +104,20 @@ const getAll = catchAsync(async (req: AuthRequest, res: Response) => {
     );
   }
 
-  const {
-    searchTerm,
-    status,
-    owner,
-    category,
-    country,
-    page,
-    limit,
-    sortBy,
-    sortOrder,
-  } = req.query as Record<string, string>;
+  const query = req.query as Record<string, unknown>;
 
   const filters = {
-    searchTerm,
-    status: status as 'draft' | 'published' | undefined,
-    owner,
-    category,
-    country,
+    searchTerm: parseRawStringQuery(query.searchTerm),
+    status: parseRawStringQuery(query.status) as
+      | 'draft'
+      | 'published'
+      | undefined,
+    owner: parseRawStringQuery(query.owner),
+    category: parseRawStringQuery(query.category),
+    country: parseRawStringQuery(query.country),
   };
 
-  const options = {
-    page: page ? Number(page) : undefined,
-    limit: limit ? Number(limit) : undefined,
-    sortBy,
-    sortOrder: sortOrder as 'asc' | 'desc' | undefined,
-  };
+  const options = parseListOptionsQuery(query);
 
   const result = await FundraiserService.getAllFundraisers(filters, options);
 
