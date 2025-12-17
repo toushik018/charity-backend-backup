@@ -116,10 +116,14 @@ const getBySlug = async (
   slug: string,
   viewerId?: string
 ): Promise<IFundraiser | null> => {
-  const doc = await Fundraiser.findOne({ slug });
+  const doc = await Fundraiser.findOne({ slug }).populate(
+    'owner',
+    'name email profilePicture'
+  );
   if (!doc) return null;
   if (doc.status === 'published') return doc;
-  if (viewerId && String(doc.owner) === String(viewerId)) return doc;
+  if (viewerId && String(doc.owner._id || doc.owner) === String(viewerId))
+    return doc;
   return null;
 };
 
@@ -203,6 +207,7 @@ const getPublicFundraisers = async (
 
   const [data, total] = await Promise.all([
     Fundraiser.find(query)
+      .populate('owner', 'name email profilePicture')
       .sort(sort)
       .skip(skip)
       .limit(limit)
