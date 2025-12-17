@@ -13,6 +13,12 @@
 import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { catchAsync } from '../../utils/catchAsync';
+import {
+  parseDateQuery,
+  parseNumberQuery,
+  parsePaginationQuery,
+  parseRawStringQuery,
+} from '../../utils/request';
 import { sendResponse } from '../../utils/sendResponse';
 import { AuthRequest } from '../auth/auth.interface';
 import { CouponService } from './coupon.service';
@@ -40,8 +46,10 @@ const getMyCoupons = catchAsync(async (req: AuthRequest, res: Response) => {
     });
   }
 
-  const page = parseInt(req.query.page as string) || 1;
-  const limit = parseInt(req.query.limit as string) || 20;
+  const { page, limit } = parsePaginationQuery(
+    req.query as Record<string, unknown>,
+    { page: 1, limit: 20 }
+  );
 
   const result = await CouponService.getUserCoupons(userId, page, limit);
 
@@ -51,6 +59,21 @@ const getMyCoupons = catchAsync(async (req: AuthRequest, res: Response) => {
     message: 'Coupons retrieved successfully',
     data: result.coupons,
     meta: result.pagination,
+  });
+});
+
+/**
+ * Admin: Get a single coupon by id.
+ */
+const getCouponById = catchAsync(async (req: Request, res: Response) => {
+  const { couponId } = req.params;
+  const result = await CouponService.getCouponById(couponId);
+
+  return sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Coupon retrieved successfully',
+    data: result,
   });
 });
 
@@ -97,7 +120,8 @@ const getCouponByCode = catchAsync(async (req: Request, res: Response) => {
  * @returns {object} Coupon statistics
  */
 const getCouponStats = catchAsync(async (req: Request, res: Response) => {
-  const { fundraiserId } = req.query;
+  const query = req.query as Record<string, unknown>;
+  const fundraiserId = parseRawStringQuery(query.fundraiserId);
 
   const stats = await CouponService.getCouponStats(
     fundraiserId as string | undefined
@@ -128,8 +152,8 @@ const selectWinner = catchAsync(async (req: Request, res: Response) => {
 
   const winner = await CouponService.selectRandomWinner({
     fundraiserId,
-    fromDate: fromDate ? new Date(fromDate) : undefined,
-    toDate: toDate ? new Date(toDate) : undefined,
+    fromDate: parseDateQuery(fromDate),
+    toDate: parseDateQuery(toDate),
   });
 
   if (!winner) {
@@ -170,10 +194,61 @@ const cleanupExpiredCoupons = catchAsync(
   }
 );
 
+/**
+ * Admin: Get all coupons with donation + fundraiser details.
+ *
+ * @route GET /api/coupons/admin/all
+ * @access Private (admin only)
+ *
+ * @query {number} [page=1] - Page number
+ * @query {number} [limit=20] - Items per page
+ * @query {string} [search] - Search by coupon code / donor email / donor name
+ * @query {'active'|'used'|'expired'} [status] - Coupon status filter
+ * @query {string} [fundraiserId] - Fundraiser filter (ObjectId)
+ */
+const getAllCoupons = catchAsync(async (req: Request, res: Response) => {
+  const query = req.query as Record<string, unknown>;
+
+  const { page, limit } = parsePaginationQuery(query, { page: 1, limit: 20 });
+
+  const search = parseRawStringQuery(query.search);
+  const status = parseRawStringQuery(query.status) as
+    | 'active'
+    | 'used'
+    | 'expired'
+    | undefined;
+  const fundraiserId = parseRawStringQuery(query.fundraiserId);
+
+  const minAmount = parseNumberQuery(query.minAmount);
+  const maxAmount = parseNumberQuery(query.maxAmount);
+  const fromDate = parseDateQuery(query.fromDate);
+  const toDate = parseDateQuery(query.toDate);
+
+  const result = await CouponService.getAllCoupons(page, limit, {
+    search: search || undefined,
+    status: status || undefined,
+    fundraiserId: fundraiserId || undefined,
+    minAmount: minAmount ?? undefined,
+    maxAmount: maxAmount ?? undefined,
+    fromDate: fromDate ?? undefined,
+    toDate: toDate ?? undefined,
+  });
+
+  return sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'All coupons retrieved successfully',
+    data: result.coupons,
+    meta: result.pagination,
+  });
+});
+
 export const CouponController = {
   getMyCoupons,
   getCouponByCode,
   getCouponStats,
   selectWinner,
   cleanupExpiredCoupons,
+  getAllCoupons,
+  getCouponById,
 };

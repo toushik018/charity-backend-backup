@@ -78,7 +78,7 @@ const formatCurrency = (value: number, currency: string): string => {
       currency,
     }).format(value ?? 0);
   } catch {
-    return `$${(value ?? 0).toFixed(2)}`;
+    return `€${(value ?? 0).toFixed(2)}`;
   }
 };
 

@@ -27,6 +27,16 @@ import {
   couponEmailTemplate,
 } from './templates/coupon.template';
 
+type TGetAllCouponsFilters = {
+  search?: string;
+  status?: 'active' | 'used' | 'expired';
+  fundraiserId?: string;
+  minAmount?: number;
+  maxAmount?: number;
+  fromDate?: Date;
+  toDate?: Date;
+};
+
 /**
  * Default coupon expiration period in days.
  */
@@ -115,7 +125,7 @@ const createCoupon = async (
     donorEmail,
     donorName,
     donationAmount,
-    currency = 'USD',
+    currency = 'EUR',
     fundraiserTitle,
   } = payload;
 
@@ -191,7 +201,7 @@ const createCoupon = async (
       to: donorEmail,
       subject: `🎉 Your Donation Coupon Code: ${code}`,
       html: emailHtml,
-      text: `Thank you for your donation of ${currency} ${donationAmount} to "${fundraiserTitle}"! Your coupon code is: ${code}. This code is valid until ${expiresAt.toDateString()}.`,
+      text: `Thank you for your donation of ${currency === 'EUR' ? '€' : currency + ' '}${donationAmount} to "${fundraiserTitle}"! Your coupon code is: ${code}. This code is valid until ${expiresAt.toDateString()}.`,
     });
 
     emailSent = true;
@@ -399,6 +409,126 @@ const getCouponStats = async (fundraiserId?: string) => {
 };
 
 /**
+ * Admin: Get all coupons with donation + fundraiser details.
+ *
+ * @param {number} [page=1] - Page number
+ * @param {number} [limit=20] - Items per page
+ * @param {TGetAllCouponsFilters} [filters] - Optional filters
+ * @returns {Promise<object>} Paginated coupons list
+ */
+const getAllCoupons = async (
+  page: number = 1,
+  limit: number = 20,
+  filters?: TGetAllCouponsFilters
+) => {
+  const safePage = Math.max(1, Number(page) || 1);
+  const safeLimit = Math.max(1, Math.min(Number(limit) || 20, 100));
+  const skip = (safePage - 1) * safeLimit;
+
+  const query: Record<string, unknown> = {};
+
+  if (filters?.status) {
+    query.status = filters.status;
+  }
+
+  if (filters?.fundraiserId) {
+    query.fundraiser = filters.fundraiserId;
+  }
+
+  if (filters?.search) {
+    const term = String(filters.search).trim();
+    if (term) {
+      query.$or = [
+        { code: { $regex: term, $options: 'i' } },
+        { donorEmail: { $regex: term, $options: 'i' } },
+        { donorName: { $regex: term, $options: 'i' } },
+      ];
+    }
+  }
+
+  if (typeof filters?.minAmount === 'number') {
+    query.donationAmount = {
+      ...((query.donationAmount as object) || {}),
+      $gte: filters.minAmount,
+    };
+  }
+
+  if (typeof filters?.maxAmount === 'number') {
+    query.donationAmount = {
+      ...((query.donationAmount as object) || {}),
+      $lte: filters.maxAmount,
+    };
+  }
+
+  if (filters?.fromDate) {
+    query.createdAt = {
+      ...((query.createdAt as object) || {}),
+      $gte: filters.fromDate,
+    };
+  }
+
+  if (filters?.toDate) {
+    query.createdAt = {
+      ...((query.createdAt as object) || {}),
+      $lte: filters.toDate,
+    };
+  }
+
+  const [coupons, total] = await Promise.all([
+    Coupon.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(safeLimit)
+      .populate('fundraiser', 'title slug coverImage status owner')
+      .populate({
+        path: 'donation',
+        select:
+          'fundraiser donor amount tipAmount totalAmount currency paymentStatus paymentMethod transactionId isAnonymous donorName donorEmail createdAt',
+        populate: {
+          path: 'donor',
+          select: 'name email profilePicture',
+        },
+      })
+      .populate('user', 'name email profilePicture'),
+    Coupon.countDocuments(query),
+  ]);
+
+  return {
+    coupons,
+    pagination: {
+      page: safePage,
+      limit: safeLimit,
+      total,
+      totalPages: Math.ceil(total / safeLimit),
+    },
+  };
+};
+
+/**
+ * Admin: Get a single coupon by id.
+ */
+const getCouponById = async (couponId: string) => {
+  const coupon = await Coupon.findById(couponId)
+    .populate('fundraiser', 'title slug coverImage status owner')
+    .populate({
+      path: 'donation',
+      select:
+        'fundraiser donor amount tipAmount totalAmount currency paymentStatus paymentMethod transactionId isAnonymous donorName donorEmail createdAt',
+      populate: {
+        path: 'donor',
+        select: 'name email profilePicture',
+      },
+    })
+    .populate('user', 'name email profilePicture');
+
+  if (!coupon) {
+    throw new AppError(StatusCodes.NOT_FOUND, 'Coupon not found');
+  }
+
+  return coupon;
+};
+
+/**
  * Mark expired coupons.
  *
  * This should be run periodically (e.g., daily cron job)
@@ -426,5 +556,7 @@ export const CouponService = {
   getCouponByCode,
   selectRandomWinner,
   getCouponStats,
+  getAllCoupons,
+  getCouponById,
   markExpiredCoupons,
 };

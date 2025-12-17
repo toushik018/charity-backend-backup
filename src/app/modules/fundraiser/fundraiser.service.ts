@@ -1,6 +1,7 @@
 import { StatusCodes } from 'http-status-codes';
 import { FilterQuery } from 'mongoose';
 import AppError from '../../error/AppError';
+import { User } from '../user/user.model';
 import type { TListOptions } from '../user/user.service';
 import {
   IFundraiser,
@@ -81,6 +82,7 @@ const updateFundraiser = async (
   }
 
   await doc.save();
+  await doc.populate('owner', 'name email profilePicture');
   return doc;
 };
 
@@ -133,6 +135,23 @@ const getAllFundraisers = async (
   } = options || {};
 
   const query: FilterQuery<IFundraiser> = buildFundraiserQuery(filters);
+  if (filters.searchTerm) {
+    const regex = new RegExp(filters.searchTerm, 'i');
+    const ownerMatches = await User.find({
+      $or: [{ name: { $regex: regex } }, { email: { $regex: regex } }],
+    })
+      .select('_id')
+      .lean();
+
+    if (ownerMatches.length > 0) {
+      query.$or = [
+        ...((Array.isArray(query.$or)
+          ? query.$or
+          : []) as FilterQuery<IFundraiser>[]),
+        { owner: { $in: ownerMatches.map((u) => u._id) } },
+      ];
+    }
+  }
 
   const skip = (page - 1) * limit;
   const sort: Record<string, 1 | -1> = {
@@ -141,6 +160,7 @@ const getAllFundraisers = async (
 
   const [data, total] = await Promise.all([
     Fundraiser.find(query)
+      .populate('owner', 'name email profilePicture')
       .sort(sort)
       .skip(skip)
       .limit(limit)
@@ -248,7 +268,7 @@ const adminDeleteFundraiser = async (id: string): Promise<void> => {
 };
 
 const adminGetById = async (id: string): Promise<IFundraiser | null> => {
-  return Fundraiser.findById(id);
+  return Fundraiser.findById(id).populate('owner', 'name email profilePicture');
 };
 
 export const FundraiserService = {

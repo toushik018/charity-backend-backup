@@ -7,6 +7,20 @@ import { Fundraiser } from '../fundraiser/fundraiser.model';
 import { TCreateDonationPayload } from './donation.interface';
 import { Donation } from './donation.model';
 
+interface AdminDonationListFilters {
+  paymentStatus?: string;
+  searchTerm?: string;
+  fundraiserId?: string;
+  donorId?: string;
+  currency?: string;
+  paymentMethod?: string;
+  isAnonymous?: boolean;
+  minAmount?: number;
+  maxAmount?: number;
+  fromDate?: string;
+  toDate?: string;
+}
+
 const createDonation = async (
   payload: TCreateDonationPayload,
   donorId?: string
@@ -15,13 +29,15 @@ const createDonation = async (
     fundraiserId,
     amount,
     tipAmount = 0,
-    currency = 'USD',
+    currency = 'EUR',
     paymentMethod,
     isAnonymous = false,
     donorName,
     donorEmail,
     message,
   } = payload;
+
+  const normalizedCurrency = currency.toUpperCase();
 
   // Verify fundraiser exists and is published
   const fundraiser = await Fundraiser.findById(fundraiserId);
@@ -51,7 +67,7 @@ const createDonation = async (
           amount,
           tipAmount,
           totalAmount,
-          currency,
+          currency: normalizedCurrency,
           paymentMethod,
           paymentStatus: 'completed', // For now, mark as completed (integrate Stripe later)
           isAnonymous,
@@ -87,7 +103,7 @@ const createDonation = async (
           type: 'DONATION',
           fundraiserId,
           donationAmount: amount,
-          donationCurrency: currency,
+          donationCurrency: normalizedCurrency,
           isPublic: true,
         });
       } catch (activityError) {
@@ -106,7 +122,7 @@ const createDonation = async (
         donorEmail,
         donorName,
         donationAmount: amount,
-        currency,
+        currency: normalizedCurrency,
         fundraiserTitle: fundraiser.title,
       });
     } catch (couponError) {
@@ -129,6 +145,19 @@ const createDonation = async (
     session.endSession();
     throw error;
   }
+};
+
+// Admin: Get donation by id
+const getDonationById = async (donationId: string) => {
+  const donation = await Donation.findById(donationId)
+    .populate('fundraiser', 'title slug coverImage')
+    .populate('donor', 'name email profilePicture');
+
+  if (!donation) {
+    throw new AppError(StatusCodes.NOT_FOUND, 'Donation not found');
+  }
+
+  return donation;
 };
 
 const getDonationsByFundraiser = async (
@@ -204,17 +233,96 @@ const getMyDonations = async (donorId: string, page = 1, limit = 20) => {
 };
 
 // Admin: Get all donations
-const getAllDonations = async (page = 1, limit = 20) => {
+const getAllDonations = async (
+  page = 1,
+  limit = 20,
+  filters: AdminDonationListFilters = {}
+) => {
   const skip = (page - 1) * limit;
 
-  const donations = await Donation.find()
+  const query: Record<string, unknown> = {};
+
+  if (filters.fundraiserId) {
+    if (mongoose.Types.ObjectId.isValid(filters.fundraiserId)) {
+      query.fundraiser = filters.fundraiserId;
+    } else {
+      query._id = { $exists: false };
+    }
+  }
+
+  if (filters.donorId) {
+    if (mongoose.Types.ObjectId.isValid(filters.donorId)) {
+      query.donor = filters.donorId;
+    } else {
+      query._id = { $exists: false };
+    }
+  }
+
+  if (filters.currency) {
+    const currency = String(filters.currency).trim().toUpperCase();
+    if (currency) query.currency = currency;
+  }
+
+  if (filters.paymentMethod) {
+    const method = String(filters.paymentMethod).trim();
+    const allowed = ['card', 'bank', 'mobile'] as const;
+    if ((allowed as readonly string[]).includes(method)) {
+      query.paymentMethod = method;
+    }
+  }
+
+  if (typeof filters.isAnonymous === 'boolean') {
+    query.isAnonymous = filters.isAnonymous;
+  }
+
+  if (filters.paymentStatus) {
+    query.paymentStatus = filters.paymentStatus;
+  }
+
+  if (filters.searchTerm) {
+    const term = String(filters.searchTerm).trim();
+    if (term) {
+      query.$or = [
+        { donorName: { $regex: term, $options: 'i' } },
+        { donorEmail: { $regex: term, $options: 'i' } },
+        { transactionId: { $regex: term, $options: 'i' } },
+      ];
+    }
+  }
+
+  if (
+    typeof filters.minAmount === 'number' ||
+    typeof filters.maxAmount === 'number'
+  ) {
+    const amount: Record<string, number> = {};
+    if (typeof filters.minAmount === 'number') amount.$gte = filters.minAmount;
+    if (typeof filters.maxAmount === 'number') amount.$lte = filters.maxAmount;
+    query.amount = amount;
+  }
+
+  if (filters.fromDate || filters.toDate) {
+    const createdAt: Record<string, Date> = {};
+    if (filters.fromDate) {
+      const d = new Date(filters.fromDate);
+      if (!Number.isNaN(d.getTime())) createdAt.$gte = d;
+    }
+    if (filters.toDate) {
+      const d = new Date(filters.toDate);
+      if (!Number.isNaN(d.getTime())) createdAt.$lte = d;
+    }
+    if (Object.keys(createdAt).length) {
+      query.createdAt = createdAt;
+    }
+  }
+
+  const donations = await Donation.find(query)
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit)
     .populate('fundraiser', 'title slug coverImage')
     .populate('donor', 'name email profilePicture');
 
-  const total = await Donation.countDocuments();
+  const total = await Donation.countDocuments(query);
 
   return {
     donations,
@@ -286,7 +394,7 @@ const getMyImpactStats = async (donorId: string) => {
     totalImpact: totalDonated + totalTips,
     donationCount: donations.length,
     fundraisersSupported,
-    currency: 'USD',
+    currency: 'EUR',
   };
 };
 
@@ -322,6 +430,8 @@ const createDonationFromStripe = async (
     donorId,
   } = payload;
 
+  const normalizedCurrency = currency.toUpperCase();
+
   // Check if donation already exists (idempotency)
   const existingDonation = await Donation.findOne({ transactionId });
   if (existingDonation) {
@@ -350,7 +460,7 @@ const createDonationFromStripe = async (
           amount,
           tipAmount,
           totalAmount,
-          currency,
+          currency: normalizedCurrency,
           paymentMethod,
           paymentStatus,
           isAnonymous,
@@ -387,7 +497,7 @@ const createDonationFromStripe = async (
           type: 'DONATION',
           fundraiserId,
           donationAmount: amount,
-          donationCurrency: currency,
+          donationCurrency: normalizedCurrency,
           isPublic: true,
         });
       } catch (activityError) {
@@ -407,7 +517,7 @@ const createDonationFromStripe = async (
           donorEmail,
           donorName,
           donationAmount: amount,
-          currency,
+          currency: normalizedCurrency,
           fundraiserTitle: fundraiser.title,
         });
       } catch (couponError) {
@@ -433,6 +543,7 @@ export const DonationService = {
   getMyDonations,
   getMyImpactStats,
   getAllDonations,
+  getDonationById,
   getDonationStats,
   deleteDonation,
 };

@@ -107,7 +107,7 @@ const couponSchema = new Schema<ICoupon>(
     currency: {
       type: String,
       required: true,
-      default: 'USD',
+      default: 'EUR',
       uppercase: true,
     },
 

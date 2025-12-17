@@ -2,14 +2,21 @@ import { Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import AppError from '../../error/AppError';
 import { catchAsync } from '../../utils/catchAsync';
+import {
+  parseBooleanQuery,
+  parseIntQuery,
+  parseListOptionsQuery,
+  parseRawStringQuery,
+} from '../../utils/request';
 import { sendResponse } from '../../utils/sendResponse';
 import { AuthRequest } from '../auth/auth.interface';
-import { TUserRole } from './user.interface';
+import { TUserFilters, TUserRole } from './user.interface';
 import {
   browseUsersFromDB,
   createUserInDB,
   deleteUserFromDB,
   followUserInDB,
+  getAdminUserDetailsFromDB,
   getAllUsersFromDB,
   getDiscoverUsers,
   getFollowersFromDB,
@@ -20,7 +27,6 @@ import {
   updateHighlightsInDB,
   updateUserInDB,
 } from './user.service';
-import { TUserFilters } from './user.utils';
 
 export const getAllUsers = catchAsync(
   async (req: AuthRequest, res: Response) => {
@@ -33,28 +39,22 @@ export const getAllUsers = catchAsync(
       );
     }
 
-    const { searchTerm, role, isActive, page, limit, sortBy, sortOrder } =
-      req.query as Record<string, string>;
+    const query = req.query as Record<string, unknown>;
 
     const allowedRoles = ['user', 'admin'] as const;
     const isUserRole = (val: unknown): val is TUserRole =>
       typeof val === 'string' &&
       (allowedRoles as readonly string[]).includes(val);
-    const roleFilter = isUserRole(role) ? role : undefined;
+    const roleRaw = parseRawStringQuery(query.role);
+    const roleFilter = isUserRole(roleRaw) ? roleRaw : undefined;
 
     const filters: TUserFilters = {
-      searchTerm,
+      searchTerm: parseRawStringQuery(query.searchTerm),
       role: roleFilter,
-      isActive:
-        typeof isActive !== 'undefined' ? isActive === 'true' : undefined,
+      isActive: parseBooleanQuery(query.isActive),
     };
 
-    const options = {
-      page: page ? Number(page) : undefined,
-      limit: limit ? Number(limit) : undefined,
-      sortBy,
-      sortOrder: sortOrder as 'asc' | 'desc' | undefined,
-    };
+    const options = parseListOptionsQuery(query);
 
     const result = await getAllUsersFromDB(filters, options);
 
@@ -64,6 +64,29 @@ export const getAllUsers = catchAsync(
       message: 'Users retrieved successfully',
       meta: result.meta,
       data: result.data,
+    });
+  }
+);
+
+export const getAdminUserDetails = catchAsync(
+  async (req: AuthRequest, res: Response) => {
+    const requester = req.user;
+
+    if (!requester || requester.role !== 'admin') {
+      throw new AppError(
+        StatusCodes.FORBIDDEN,
+        'Only admins can view admin user details'
+      );
+    }
+
+    const { userId } = req.params as { userId: string };
+    const result = await getAdminUserDetailsFromDB(userId);
+
+    sendResponse(res, {
+      statusCode: StatusCodes.OK,
+      success: true,
+      message: 'Admin user details retrieved successfully',
+      data: result,
     });
   }
 );
@@ -328,6 +351,7 @@ const getPublicProfile = catchAsync(async (req: AuthRequest, res: Response) => {
 export const UserController = {
   getAllUsers,
   getSingleUser,
+  getAdminUserDetails,
   updateUser,
   updateMe,
   deleteUser,
@@ -340,8 +364,8 @@ export const UserController = {
   getPublicProfile,
   discoverUsers: catchAsync(async (req: AuthRequest, res: Response) => {
     const requester = req.user;
-    const limitParam = (req.query?.limit as string) || '';
-    const limit = Number(limitParam) || 10;
+    const limit =
+      parseIntQuery((req.query as Record<string, unknown>)?.limit) || 10;
     const data = await getDiscoverUsers(
       requester ? requester.userId : null,
       limit
@@ -355,9 +379,13 @@ export const UserController = {
   }),
   browseUsers: catchAsync(async (req: AuthRequest, res: Response) => {
     const requester = req.user;
-    const page = (req.query?.page ? Number(req.query.page as string) : 1) || 1;
-    const limit =
-      (req.query?.limit ? Number(req.query.limit as string) : 20) || 20;
+    const { page, limit } = (() => {
+      const query = req.query as Record<string, unknown>;
+      return {
+        page: parseIntQuery(query.page) || 1,
+        limit: parseIntQuery(query.limit) || 20,
+      };
+    })();
     const result = await browseUsersFromDB(
       requester ? requester.userId : null,
       page,

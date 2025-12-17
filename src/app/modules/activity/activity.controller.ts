@@ -1,7 +1,22 @@
+/**
+ * @fileoverview Activity controller layer.
+ *
+ * Handles HTTP requests for activity-related operations, delegating
+ * business logic to the service layer and formatting responses.
+ *
+ * @module modules/activity/controller
+ */
+
 import { Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
+
 import AppError from '../../error/AppError';
 import { catchAsync } from '../../utils/catchAsync';
+import {
+  parseBooleanQuery,
+  parseOptionalPaginationOptions,
+  parseRawStringQuery,
+} from '../../utils/request';
 import { sendResponse } from '../../utils/sendResponse';
 import { AuthRequest } from '../auth/auth.interface';
 import { TActivityType } from './activity.interface';
@@ -14,14 +29,55 @@ import {
   getUserActivities,
 } from './activity.service';
 
-const create = catchAsync(async (req: AuthRequest, res: Response) => {
-  const requester = req.user;
-  if (!requester) {
+/* -------------------------------------------------------------------------- */
+/*                              HELPERS                                       */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Extracts pagination options from request query.
+ *
+ * @param query - Request query object
+ * @returns Pagination options
+ */
+const extractPaginationOptions = (query: Record<string, unknown>) =>
+  parseOptionalPaginationOptions(query);
+
+/**
+ * Parses boolean from string query parameter.
+ *
+ * @param value - String value ('true' or 'false')
+ * @returns Boolean or undefined
+ */
+const parseBoolean = (value: unknown): boolean | undefined =>
+  parseBooleanQuery(value);
+
+/**
+ * Ensures the request has an authenticated user.
+ *
+ * @param req - Auth request object
+ * @throws AppError if user is not authenticated
+ */
+const requireAuth = (req: AuthRequest): void => {
+  if (!req.user) {
     throw new AppError(
       StatusCodes.UNAUTHORIZED,
       'Authenticated user is required'
     );
   }
+};
+
+/* -------------------------------------------------------------------------- */
+/*                              CREATE                                        */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Creates a new activity.
+ *
+ * @route POST /activities
+ * @access Private (user, admin)
+ */
+const create = catchAsync(async (req: AuthRequest, res: Response) => {
+  requireAuth(req);
 
   const {
     type,
@@ -40,7 +96,7 @@ const create = catchAsync(async (req: AuthRequest, res: Response) => {
   };
 
   const activity = await createActivity({
-    userId: requester.userId,
+    userId: req.user!.userId,
     type,
     fundraiserId,
     donationAmount,
@@ -57,22 +113,23 @@ const create = catchAsync(async (req: AuthRequest, res: Response) => {
   });
 });
 
+/* -------------------------------------------------------------------------- */
+/*                              READ - USER                                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Retrieves current user's activities.
+ *
+ * @route GET /activities/me
+ * @access Private (user, admin)
+ */
 const getMyActivities = catchAsync(async (req: AuthRequest, res: Response) => {
-  const requester = req.user;
-  if (!requester) {
-    throw new AppError(
-      StatusCodes.UNAUTHORIZED,
-      'Authenticated user is required'
-    );
-  }
+  requireAuth(req);
 
-  const { page, limit } = req.query as Record<string, string>;
-  const options = {
-    page: page ? Number(page) : undefined,
-    limit: limit ? Number(limit) : undefined,
-  };
-
-  const result = await getUserActivities(requester.userId, options);
+  const options = extractPaginationOptions(
+    req.query as Record<string, unknown>
+  );
+  const result = await getUserActivities(req.user!.userId, options);
 
   sendResponse(res, {
     statusCode: StatusCodes.OK,
@@ -83,14 +140,18 @@ const getMyActivities = catchAsync(async (req: AuthRequest, res: Response) => {
   });
 });
 
+/**
+ * Retrieves activities for a specific user.
+ *
+ * @route GET /activities/user/:userId
+ * @access Public
+ */
 const getUserActivitiesController = catchAsync(
   async (req: AuthRequest, res: Response) => {
     const { userId } = req.params as { userId: string };
-    const { page, limit } = req.query as Record<string, string>;
-    const options = {
-      page: page ? Number(page) : undefined,
-      limit: limit ? Number(limit) : undefined,
-    };
+    const options = extractPaginationOptions(
+      req.query as Record<string, unknown>
+    );
 
     const result = await getPublicUserActivities(userId, options);
 
@@ -104,14 +165,22 @@ const getUserActivitiesController = catchAsync(
   }
 );
 
+/* -------------------------------------------------------------------------- */
+/*                              READ - FUNDRAISER                             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Retrieves activities for a specific fundraiser.
+ *
+ * @route GET /activities/fundraiser/:fundraiserId
+ * @access Public
+ */
 const getFundraiserActivitiesController = catchAsync(
   async (req: AuthRequest, res: Response) => {
     const { fundraiserId } = req.params as { fundraiserId: string };
-    const { page, limit } = req.query as Record<string, string>;
-    const options = {
-      page: page ? Number(page) : undefined,
-      limit: limit ? Number(limit) : undefined,
-    };
+    const options = extractPaginationOptions(
+      req.query as Record<string, unknown>
+    );
 
     const result = await getFundraiserActivities(fundraiserId, options);
 
@@ -125,13 +194,32 @@ const getFundraiserActivitiesController = catchAsync(
   }
 );
 
-// Admin: Get all activities
+/* -------------------------------------------------------------------------- */
+/*                              ADMIN                                         */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Retrieves all activities with filtering (admin only).
+ *
+ * @route GET /activities/admin/all
+ * @access Private (admin)
+ */
 const getAllActivitiesController = catchAsync(
   async (req: AuthRequest, res: Response) => {
-    const { page, limit } = req.query as Record<string, string>;
+    const query = req.query as Record<string, unknown>;
+
     const options = {
-      page: page ? Number(page) : undefined,
-      limit: limit ? Number(limit) : undefined,
+      ...extractPaginationOptions(query),
+      filters: {
+        searchTerm: parseRawStringQuery(query.searchTerm),
+        type: parseRawStringQuery(query.type) as TActivityType | undefined,
+        isPublic: parseBoolean(query.isPublic),
+        userId: parseRawStringQuery(query.userId),
+        fundraiserId: parseRawStringQuery(query.fundraiserId),
+        reactionType: parseRawStringQuery(query.reactionType),
+        fromDate: parseRawStringQuery(query.fromDate),
+        toDate: parseRawStringQuery(query.toDate),
+      },
     };
 
     const result = await getAllActivities(options);
@@ -146,10 +234,16 @@ const getAllActivitiesController = catchAsync(
   }
 );
 
-// Admin: Delete activity
+/**
+ * Deletes an activity (admin only).
+ *
+ * @route DELETE /activities/admin/:activityId
+ * @access Private (admin)
+ */
 const deleteActivityController = catchAsync(
   async (req: AuthRequest, res: Response) => {
     const { activityId } = req.params as { activityId: string };
+
     await deleteActivity(activityId);
 
     sendResponse(res, {
@@ -161,6 +255,15 @@ const deleteActivityController = catchAsync(
   }
 );
 
+/* -------------------------------------------------------------------------- */
+/*                              EXPORTS                                       */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Activity controller methods.
+ *
+ * Grouped export of all activity-related controller functions.
+ */
 export const ActivityController = {
   create,
   getMyActivities,

@@ -47,6 +47,30 @@ router.get(
 );
 
 /**
+ * @route GET /api/coupons/admin/all
+ * @description Get all coupons with populated donation + fundraiser (admin only)
+ * @access Private (admin)
+ */
+router.get(
+  '/admin/all',
+  auth('admin'),
+  validateRequest(CouponValidation.getAllCouponsSchema),
+  CouponController.getAllCoupons
+);
+
+/**
+ * @route GET /api/coupons/admin/:couponId
+ * @description Get a single coupon by id (admin only)
+ * @access Private (admin)
+ */
+router.get(
+  '/admin/:couponId',
+  auth('admin'),
+  validateRequest(CouponValidation.getCouponByIdSchema),
+  CouponController.getCouponById
+);
+
+/**
  * @route POST /api/coupons/admin/select-winner
  * @description Select a random winner from active coupons (admin only)
  * @access Private (admin)

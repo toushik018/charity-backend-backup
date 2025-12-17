@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import AppError from '../../error/AppError';
 import { catchAsync } from '../../utils/catchAsync';
+import { parseOptionalPaginationOptions } from '../../utils/request';
 import { sendResponse } from '../../utils/sendResponse';
 import { AuthRequest } from '../auth/auth.interface';
 import { TReactionType } from './fundraiser.reaction.interface';
@@ -73,11 +74,9 @@ const getMyReactionsController = catchAsync(
         'Authenticated user is required'
       );
     }
-    const { page, limit } = req.query as Record<string, string>;
-    const options = {
-      page: page ? Number(page) : undefined,
-      limit: limit ? Number(limit) : undefined,
-    };
+    const options = parseOptionalPaginationOptions(
+      req.query as Record<string, unknown>
+    );
     const result = await getMyReactions(requester.userId, options);
     sendResponse(res, {
       statusCode: StatusCodes.OK,

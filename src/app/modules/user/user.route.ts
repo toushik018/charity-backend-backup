@@ -19,6 +19,13 @@ router.get(
   validateRequest(getUsersQueryValidation),
   UserController.getAllUsers
 );
+
+router.get(
+  '/admin/:userId/details',
+  auth('admin'),
+  validateRequest(getUserByIdParamValidation),
+  UserController.getAdminUserDetails
+);
 // Admin create user
 router.post(
   '/',

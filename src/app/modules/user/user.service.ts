@@ -1,11 +1,14 @@
 import { StatusCodes } from 'http-status-codes';
-import { FilterQuery, PipelineStage } from 'mongoose';
+import { FilterQuery, PipelineStage, Types } from 'mongoose';
 import config from '../../config';
 import AppError from '../../error/AppError';
+import { Activity } from '../activity/activity.model';
+import { Coupon } from '../coupon/coupon.model';
+import { Donation } from '../donation/donation.model';
 import { Fundraiser } from '../fundraiser/fundraiser.model';
-import { TProfile, TUser, TUserRole } from './user.interface';
+import { TProfile, TUser, TUserFilters, TUserRole } from './user.interface';
 import { IUserDocument, User } from './user.model';
-import { TUserFilters, buildUserQuery } from './user.utils';
+import { buildUserQuery } from './user.utils';
 
 export type TListOptions = {
   page?: number;
@@ -71,6 +74,194 @@ export const getUserByIdFromDB = async (userId: string) => {
     throw new AppError(
       StatusCodes.INTERNAL_SERVER_ERROR,
       (error as Error)?.message || 'Failed to fetch user'
+    );
+  }
+};
+
+export const getAdminUserDetailsFromDB = async (userId: string) => {
+  try {
+    const userObjectId = new Types.ObjectId(userId);
+
+    const user = await User.findById(userObjectId)
+      .select(
+        'name email role isActive profile profilePicture coverImage bio followers following pinnedFundraisers createdAt updatedAt'
+      )
+      .populate({
+        path: 'pinnedFundraisers',
+        select:
+          'title slug coverImage status goalAmount currentAmount donationCount category',
+      })
+      .lean({ virtuals: true });
+
+    if (!user) {
+      throw new AppError(StatusCodes.NOT_FOUND, 'User not found');
+    }
+
+    const email = String(
+      (user as unknown as { email: string }).email || ''
+    ).toLowerCase();
+
+    const donationMatch: Record<string, unknown> = {
+      $or: [{ donor: userObjectId }, { donorEmail: email }],
+    };
+    const couponMatch: Record<string, unknown> = {
+      $or: [{ user: userObjectId }, { donorEmail: email }],
+    };
+
+    const [
+      recentDonations,
+      donationTotal,
+      donationCompleted,
+      donationAmountAgg,
+      recentCoupons,
+      couponTotal,
+      couponStatusAgg,
+      recentFundraisers,
+      fundraiserTotal,
+      fundraiserStatusAgg,
+      recentActivities,
+      activityTotal,
+    ] = await Promise.all([
+      Donation.find(donationMatch)
+        .sort({ createdAt: -1 })
+        .limit(100)
+        .populate('fundraiser', 'title slug coverImage')
+        .populate('donor', 'name email profilePicture')
+        .lean(),
+      Donation.countDocuments(donationMatch),
+      Donation.countDocuments({ ...donationMatch, paymentStatus: 'completed' }),
+      Donation.aggregate([
+        { $match: { ...donationMatch, paymentStatus: 'completed' } },
+        {
+          $group: {
+            _id: null,
+            totalAmount: { $sum: '$totalAmount' },
+            totalTips: { $sum: '$tipAmount' },
+          },
+        },
+      ]),
+
+      Coupon.find(couponMatch)
+        .sort({ createdAt: -1 })
+        .limit(100)
+        .populate('fundraiser', 'title slug coverImage status')
+        .populate({
+          path: 'donation',
+          select:
+            'fundraiser donor amount tipAmount totalAmount currency paymentStatus paymentMethod transactionId isAnonymous donorName donorEmail createdAt',
+          populate: { path: 'donor', select: 'name email profilePicture' },
+        })
+        .lean(),
+      Coupon.countDocuments(couponMatch),
+      Coupon.aggregate([
+        { $match: couponMatch },
+        { $group: { _id: '$status', count: { $sum: 1 } } },
+      ]),
+
+      Fundraiser.find({ owner: userObjectId })
+        .sort({ createdAt: -1 })
+        .limit(100)
+        .select(
+          'title slug status coverImage goalAmount currentAmount donationCount category owner createdAt updatedAt'
+        )
+        .populate('owner', 'name email')
+        .lean(),
+      Fundraiser.countDocuments({ owner: userObjectId }),
+      Fundraiser.aggregate([
+        { $match: { owner: userObjectId } },
+        {
+          $group: {
+            _id: '$status',
+            count: { $sum: 1 },
+            totalRaised: { $sum: '$currentAmount' },
+          },
+        },
+      ]),
+
+      Activity.find({ user: userObjectId })
+        .sort({ createdAt: -1 })
+        .limit(100)
+        .populate('user', 'name email profilePicture')
+        .populate('fundraiser', 'title slug coverImage')
+        .lean(),
+      Activity.countDocuments({ user: userObjectId }),
+    ]);
+
+    const donationAmount = donationAmountAgg?.[0] || {
+      totalAmount: 0,
+      totalTips: 0,
+    };
+
+    const couponCounts = (couponStatusAgg || []).reduce(
+      (acc: Record<string, number>, row: { _id: string; count: number }) => {
+        acc[String(row._id)] = row.count;
+        return acc;
+      },
+      {}
+    );
+
+    const fundraiserCounts = (fundraiserStatusAgg || []).reduce(
+      (
+        acc: Record<string, { count: number; totalRaised: number }>,
+        row: { _id: string; count: number; totalRaised: number }
+      ) => {
+        acc[String(row._id)] = {
+          count: row.count,
+          totalRaised: row.totalRaised || 0,
+        };
+        return acc;
+      },
+      {}
+    );
+
+    const followers = user.followers;
+    const following = user.following;
+    const followersCount = Array.isArray(followers) ? followers.length : 0;
+    const followingCount = Array.isArray(following) ? following.length : 0;
+
+    return {
+      user: {
+        ...user,
+        followersCount,
+        followingCount,
+      },
+      stats: {
+        donations: {
+          total: donationTotal,
+          completed: donationCompleted,
+          totalAmount: donationAmount.totalAmount || 0,
+          totalTips: donationAmount.totalTips || 0,
+        },
+        coupons: {
+          total: couponTotal,
+          active: couponCounts.active || 0,
+          used: couponCounts.used || 0,
+          expired: couponCounts.expired || 0,
+        },
+        fundraisers: {
+          total: fundraiserTotal,
+          published: fundraiserCounts.published?.count || 0,
+          draft: fundraiserCounts.draft?.count || 0,
+          totalRaised:
+            (fundraiserCounts.published?.totalRaised || 0) +
+            (fundraiserCounts.draft?.totalRaised || 0),
+        },
+        activities: {
+          total: activityTotal,
+        },
+      },
+      recent: {
+        donations: recentDonations,
+        coupons: recentCoupons,
+        fundraisers: recentFundraisers,
+        activities: recentActivities,
+      },
+    };
+  } catch (error) {
+    if (error instanceof AppError) throw error;
+    throw new AppError(
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      (error as Error)?.message || 'Failed to fetch admin user details'
     );
   }
 };
