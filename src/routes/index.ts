@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { ActivityRoute } from '../app/modules/activity/activity.route';
 import { AuthRoute } from '../app/modules/auth/auth.route';
+import { AwardRoute } from '../app/modules/award';
 import { CouponRoutes } from '../app/modules/coupon';
 import { DonationRoute } from '../app/modules/donation/donation.route';
 import { FundraiserRoute } from '../app/modules/fundraiser/fundraiser.route';
@@ -42,6 +43,10 @@ const moduleRoutes = [
   {
     path: '/coupons',
     route: CouponRoutes,
+  },
+  {
+    path: '/awards',
+    route: AwardRoute,
   },
 ];
 
