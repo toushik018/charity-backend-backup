@@ -342,12 +342,6 @@ const selectRandomWinner = async (params?: ISelectWinnerParams) => {
     .populate('fundraiser', 'title slug')
     .populate('user', 'name email profilePicture');
 
-  if (winner) {
-    // Mark as used
-    await Coupon.findByIdAndUpdate(winner._id, { status: 'used' });
-    winner.status = 'used';
-  }
-
   return winner;
 };
 
