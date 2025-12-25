@@ -2,12 +2,13 @@ import { ErrorRequestHandler } from 'express';
 import { ZodError } from 'zod';
 import config from '../config';
 
-import { TErrorSources } from '../interface/error.interface';
-import handleZodError from '../error/handleZodError';
-import handleValidationError from '../error/handleValidationError';
+import AppError from '../error/AppError';
 import handleCastError from '../error/handleCastError';
 import handleDuplicateError from '../error/handleDuplicateError';
-import AppError from '../error/AppError';
+import handleValidationError from '../error/handleValidationError';
+import handleZodError from '../error/handleZodError';
+import { TErrorSources } from '../interface/error.interface';
+import logger from '../utils/logger';
 
 const globalErrorHandler: ErrorRequestHandler = (err, req, res, next) => {
   // Setting default values
@@ -59,6 +60,18 @@ const globalErrorHandler: ErrorRequestHandler = (err, req, res, next) => {
       },
     ];
   }
+
+  // Log the error
+  logger.error(message, {
+    statusCode,
+    errorSources,
+    method: req.method,
+    url: req.originalUrl,
+    ip: req.ip,
+    userId: (req as unknown as { user?: { _id?: string } }).user?._id,
+    stack: err?.stack,
+    error: err instanceof Error ? err.message : err,
+  });
 
   // Ultimate return
   const payload: Record<string, unknown> = {

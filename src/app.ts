@@ -9,6 +9,7 @@ import morgan from 'morgan';
 import config from './app/config';
 import { CustomError } from './app/interface/error.interface';
 import globalErrorHandler from './app/middlewares/globalErrorHandler';
+import requestLogger from './app/middlewares/requestLogger';
 import router from './routes';
 
 const app: Application = express();
@@ -20,8 +21,13 @@ app.set('trust proxy', 1);
 app.use(helmet());
 app.use(compression());
 
-// Request logging (skip noisy logs in tests)
-app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+// Request logging with Winston (structured logs for production)
+app.use(requestLogger);
+
+// Morgan for dev console output (skip in production - Winston handles it)
+if (process.env.NODE_ENV !== 'production') {
+  app.use(morgan('dev'));
+}
 
 // Stripe webhook needs raw body - must be before json parser
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
