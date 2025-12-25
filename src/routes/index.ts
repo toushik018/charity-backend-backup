@@ -6,6 +6,7 @@ import { CouponRoutes } from '../app/modules/coupon';
 import { DonationRoute } from '../app/modules/donation/donation.route';
 import { FundraiserRoute } from '../app/modules/fundraiser/fundraiser.route';
 import { StripeRoute } from '../app/modules/stripe/stripe.route';
+import { SystemLogsRoute } from '../app/modules/system-logs';
 import { UploadRoute } from '../app/modules/upload/upload.route';
 import { UserRoutes } from '../app/modules/user/user.route';
 
@@ -47,6 +48,10 @@ const moduleRoutes = [
   {
     path: '/awards',
     route: AwardRoute,
+  },
+  {
+    path: '/system-logs',
+    route: SystemLogsRoute,
   },
 ];
 
