@@ -95,41 +95,37 @@ const createDonation = async (
     await session.commitTransaction();
     session.endSession();
 
-    // Create activity for logged-in users (non-anonymous donations)
+    // Fire-and-forget: Create activity for logged-in users (non-anonymous donations)
     if (donorId && !isAnonymous) {
-      try {
-        await createActivity({
-          userId: donorId,
-          type: 'DONATION',
-          fundraiserId,
-          donationAmount: amount,
-          donationCurrency: normalizedCurrency,
-          isPublic: true,
-        });
-      } catch (activityError) {
+      createActivity({
+        userId: donorId,
+        type: 'DONATION',
+        fundraiserId,
+        donationAmount: amount,
+        donationCurrency: normalizedCurrency,
+        isPublic: true,
+      }).catch((activityError) => {
         // Log error but don't fail the donation
         // eslint-disable-next-line no-console
         console.error('Failed to create donation activity:', activityError);
-      }
+      });
     }
 
-    // Create and send coupon for the donation
-    try {
-      await CouponService.createCoupon({
-        donationId: donation._id.toString(),
-        fundraiserId,
-        userId: donorId,
-        donorEmail,
-        donorName,
-        donationAmount: amount,
-        currency: normalizedCurrency,
-        fundraiserTitle: fundraiser.title,
-      });
-    } catch (couponError) {
+    // Fire-and-forget: Create and send coupon for the donation
+    CouponService.createCoupon({
+      donationId: donation._id.toString(),
+      fundraiserId,
+      userId: donorId,
+      donorEmail,
+      donorName,
+      donationAmount: amount,
+      currency: normalizedCurrency,
+      fundraiserTitle: fundraiser.title,
+    }).catch((couponError) => {
       // Log error but don't fail the donation
       // eslint-disable-next-line no-console
       console.error('Failed to create coupon:', couponError);
-    }
+    });
 
     // Return donation with populated fundraiser
     const populatedDonation = await Donation.findById(donation._id)
@@ -489,42 +485,40 @@ const createDonationFromStripe = async (
     await session.commitTransaction();
     session.endSession();
 
-    // Create activity for logged-in users (non-anonymous donations)
+    // Fire-and-forget: Create activity for logged-in users (non-anonymous donations)
+    // These are non-blocking to ensure fast response to client
     if (donorId && !isAnonymous && paymentStatus === 'completed') {
-      try {
-        await createActivity({
-          userId: donorId,
-          type: 'DONATION',
-          fundraiserId,
-          donationAmount: amount,
-          donationCurrency: normalizedCurrency,
-          isPublic: true,
-        });
-      } catch (activityError) {
+      createActivity({
+        userId: donorId,
+        type: 'DONATION',
+        fundraiserId,
+        donationAmount: amount,
+        donationCurrency: normalizedCurrency,
+        isPublic: true,
+      }).catch((activityError) => {
         // Log error but don't fail the donation
         // eslint-disable-next-line no-console
         console.error('Failed to create donation activity:', activityError);
-      }
+      });
     }
 
-    // Create and send coupon for completed donations
+    // Fire-and-forget: Create and send coupon for completed donations
+    // Email sending is slow, so we don't await this
     if (paymentStatus === 'completed') {
-      try {
-        await CouponService.createCoupon({
-          donationId: donation._id.toString(),
-          fundraiserId,
-          userId: donorId,
-          donorEmail,
-          donorName,
-          donationAmount: amount,
-          currency: normalizedCurrency,
-          fundraiserTitle: fundraiser.title,
-        });
-      } catch (couponError) {
+      CouponService.createCoupon({
+        donationId: donation._id.toString(),
+        fundraiserId,
+        userId: donorId,
+        donorEmail,
+        donorName,
+        donationAmount: amount,
+        currency: normalizedCurrency,
+        fundraiserTitle: fundraiser.title,
+      }).catch((couponError) => {
         // Log error but don't fail the donation
         // eslint-disable-next-line no-console
         console.error('Failed to create coupon:', couponError);
-      }
+      });
     }
 
     return donation;

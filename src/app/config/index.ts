@@ -154,12 +154,6 @@ const config = {
   frontend_url: process.env.FRONTEND_URL,
 
   /**
-   * Legacy shop frontend URL (kept for compatibility).
-   * @deprecated Use frontend_url instead
-   */
-  shop_frontend_url: process.env.SHOP_FRONTEND_URL,
-
-  /**
    * Cookie domain for cross-subdomain cookies.
    */
   cookie_domain: process.env.COOKIE_DOMAIN,
