@@ -637,6 +637,25 @@ export const getDiscoverUsers = async (
   }
 };
 
+export const updateCausesInDB = async (userId: string, causes: string[]) => {
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new AppError(StatusCodes.NOT_FOUND, 'User not found');
+  }
+
+  // Validate max 3 causes
+  if (causes.length > 3) {
+    throw new AppError(StatusCodes.BAD_REQUEST, 'Maximum 3 causes allowed');
+  }
+
+  // Remove duplicates
+  const uniqueCauses = Array.from(new Set(causes));
+
+  user.causes = uniqueCauses;
+  const updated = await user.save();
+  return updated;
+};
+
 export const browseUsersFromDB = async (
   requesterId: string | null,
   page: number,

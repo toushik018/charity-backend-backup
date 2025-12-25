@@ -160,6 +160,16 @@ const userSchema = new Schema<IUserDocument, IUserModel>(
         ref: 'Fundraiser',
       },
     ],
+    causes: {
+      type: [String],
+      default: [],
+      validate: {
+        validator: function (v: string[]) {
+          return v.length <= 3;
+        },
+        message: 'Maximum 3 causes allowed',
+      },
+    },
   },
   { timestamps: true }
 );
