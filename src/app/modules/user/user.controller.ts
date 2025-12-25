@@ -24,6 +24,7 @@ import {
   getPublicUserProfileFromDB,
   getUserByIdFromDB,
   unfollowUserInDB,
+  updateCausesInDB,
   updateHighlightsInDB,
   updateUserInDB,
 } from './user.service';
@@ -336,6 +337,30 @@ const updateMyHighlights = catchAsync(
   }
 );
 
+const updateMyCauses = catchAsync(async (req: AuthRequest, res: Response) => {
+  const requester = req.user;
+
+  if (!requester) {
+    throw new AppError(
+      StatusCodes.UNAUTHORIZED,
+      'Authenticated user is required'
+    );
+  }
+
+  const { causes } = req.body as {
+    causes?: string[];
+  };
+
+  const updatedUser = await updateCausesInDB(requester.userId, causes || []);
+
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Causes updated successfully',
+    data: updatedUser.causes || [],
+  });
+});
+
 const getPublicProfile = catchAsync(async (req: AuthRequest, res: Response) => {
   const { userId } = req.params;
   const result = await getPublicUserProfileFromDB(userId);
@@ -361,6 +386,7 @@ export const UserController = {
   getFollowers,
   getFollowing,
   updateMyHighlights,
+  updateMyCauses,
   getPublicProfile,
   discoverUsers: catchAsync(async (req: AuthRequest, res: Response) => {
     const requester = req.user;

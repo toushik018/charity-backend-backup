@@ -204,3 +204,36 @@ export const updateHighlightsValidation = z.object({
       .optional(),
   }),
 });
+
+/* -------------------------------------------------------------------------- */
+/*                           UPDATE CAUSES                                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Valid cause IDs that users can select.
+ */
+const validCauseIds = [
+  'animals',
+  'arts_culture',
+  'community',
+  'crisis_relief',
+  'education',
+  'environment',
+  'faith',
+  'medical',
+  'social_advocacy',
+] as const;
+
+/**
+ * Validation schema for updating user's supported causes.
+ *
+ * Allows users to select up to 3 causes to showcase on their profile.
+ */
+export const updateCausesValidation = z.object({
+  body: z.object({
+    causes: z
+      .array(z.enum(validCauseIds, { message: 'Invalid cause id' }))
+      .max(3, 'Maximum 3 causes allowed')
+      .default([]),
+  }),
+});

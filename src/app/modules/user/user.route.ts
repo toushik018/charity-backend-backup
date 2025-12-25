@@ -6,6 +6,7 @@ import {
   createUserValidation,
   getUserByIdParamValidation,
   getUsersQueryValidation,
+  updateCausesValidation,
   updateHighlightsValidation,
   updateMeValidation,
   updateUserValidation,
@@ -45,6 +46,12 @@ router.patch(
   auth('admin', 'user'),
   validateRequest(updateHighlightsValidation),
   UserController.updateMyHighlights
+);
+router.patch(
+  '/me/causes',
+  auth('admin', 'user'),
+  validateRequest(updateCausesValidation),
+  UserController.updateMyCauses
 );
 router.get('/discover', auth('admin', 'user'), UserController.discoverUsers);
 router.get('/browse', auth('admin', 'user'), UserController.browseUsers);

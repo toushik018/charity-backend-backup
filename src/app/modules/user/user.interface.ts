@@ -217,6 +217,11 @@ export type TUser = {
    * Array of fundraiser IDs pinned to profile.
    */
   pinnedFundraisers?: Types.ObjectId[];
+
+  /**
+   * Array of cause IDs the user supports (max 3).
+   */
+  causes?: string[];
 };
 
 /* -------------------------------------------------------------------------- */
