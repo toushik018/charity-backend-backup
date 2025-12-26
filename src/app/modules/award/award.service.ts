@@ -169,7 +169,9 @@ const announceAward = async ({
       );
     }
 
-    await sendAwardAnnouncementEmail(populated as PopulatedAward);
+    setImmediate(() => {
+      void sendAwardAnnouncementEmail(populated as PopulatedAward);
+    });
 
     return populated;
   } catch (error) {
