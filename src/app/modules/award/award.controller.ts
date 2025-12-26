@@ -39,22 +39,71 @@ const announceAward = catchAsync(async (req: AuthRequest, res: Response) => {
   });
 });
 
+const deleteAward = catchAsync(async (req: Request, res: Response) => {
+  const { awardId } = req.params as { awardId: string };
+  const deleted = await AwardService.deleteAwardById(awardId);
+
+  return sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Award deleted successfully',
+    data: deleted,
+  });
+});
+
+const bulkDeleteAwards = catchAsync(async (req: Request, res: Response) => {
+  const { awardIds, deleteAll, filters } = req.body as {
+    awardIds?: string[];
+    deleteAll?: boolean;
+    filters?: {
+      fundraiserId?: string;
+      emailStatus?: 'sent' | 'pending';
+      searchTerm?: string;
+      fromDate?: string;
+      toDate?: string;
+    };
+  };
+
+  const deletedCount = await AwardService.bulkDeleteAwards({
+    awardIds: deleteAll ? undefined : awardIds,
+    filters: filters
+      ? {
+          ...filters,
+          fromDate: filters.fromDate ? new Date(filters.fromDate) : undefined,
+          toDate: filters.toDate ? new Date(filters.toDate) : undefined,
+        }
+      : undefined,
+  });
+
+  return sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Awards deleted successfully',
+    data: { deletedCount },
+  });
+});
+
 const getAdminAwards = catchAsync(async (req: Request, res: Response) => {
   const { page, limit } = parsePaginationQuery(
     req.query as Record<string, unknown>,
     { page: 1, limit: 20 }
   );
 
-  const { fundraiserId, fromDate, toDate } = req.query as {
-    fundraiserId?: string;
-    fromDate?: string;
-    toDate?: string;
-  };
+  const { fundraiserId, fromDate, toDate, searchTerm, emailStatus } =
+    req.query as {
+      fundraiserId?: string;
+      fromDate?: string;
+      toDate?: string;
+      searchTerm?: string;
+      emailStatus?: 'sent' | 'pending';
+    };
 
   const result = await AwardService.getAdminAwards({
     page,
     limit,
     fundraiserId,
+    searchTerm,
+    emailStatus,
     fromDate: fromDate ? new Date(fromDate) : undefined,
     toDate: toDate ? new Date(toDate) : undefined,
   });
@@ -80,8 +129,54 @@ const getAwardById = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+/**
+ * Gets donors for a specific fundraiser with weighted probability data.
+ *
+ * Returns all active coupons for the fundraiser with calculated
+ * win probability based on donation amount.
+ *
+ * @route GET /api/awards/admin/fundraiser/:fundraiserId/donors
+ */
+const getFundraiserDonors = catchAsync(async (req: Request, res: Response) => {
+  const { fundraiserId } = req.params as { fundraiserId: string };
+
+  const result = await AwardService.getFundraiserDonorsForAward(fundraiserId);
+
+  return sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Fundraiser donors retrieved successfully',
+    data: result,
+  });
+});
+
+/**
+ * Selects a weighted random winner from a fundraiser's donors.
+ *
+ * Uses weighted probability based on donation amount.
+ * Higher donations have proportionally higher chance of winning.
+ *
+ * @route POST /api/awards/admin/fundraiser/:fundraiserId/select-winner
+ */
+const selectWeightedWinner = catchAsync(async (req: Request, res: Response) => {
+  const { fundraiserId } = req.params as { fundraiserId: string };
+
+  const result = await AwardService.selectWeightedWinner(fundraiserId);
+
+  return sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Winner selected successfully',
+    data: result,
+  });
+});
+
 export const AwardController = {
   announceAward,
   getAdminAwards,
   getAwardById,
+  getFundraiserDonors,
+  selectWeightedWinner,
+  deleteAward,
+  bulkDeleteAwards,
 };
