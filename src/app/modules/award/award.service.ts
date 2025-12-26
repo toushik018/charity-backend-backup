@@ -9,12 +9,17 @@ import { IAnnounceAwardPayload, IAward } from './award.interface';
 import { Award } from './award.model';
 import { awardAnnouncementEmailTemplate } from './templates/award-email.template';
 
-interface IGetAwardsParams {
-  page?: number;
-  limit?: number;
+interface IAwardQueryFilters {
   fundraiserId?: string;
+  searchTerm?: string;
+  emailStatus?: 'sent' | 'pending';
   fromDate?: Date;
   toDate?: Date;
+}
+
+interface IGetAwardsParams extends IAwardQueryFilters {
+  page?: number;
+  limit?: number;
 }
 
 type PopulatedAward = IAward & {
@@ -174,18 +179,21 @@ const announceAward = async ({
   }
 };
 
-const getAdminAwards = async ({
-  page = 1,
-  limit = 20,
+const buildAwardsQuery = ({
   fundraiserId,
+  searchTerm,
+  emailStatus,
   fromDate,
   toDate,
-}: IGetAwardsParams) => {
-  const skip = (page - 1) * limit;
+}: IAwardQueryFilters = {}) => {
   const query: FilterQuery<IAward> = {};
 
   if (fundraiserId) {
     query.fundraiser = fundraiserId;
+  }
+
+  if (emailStatus) {
+    query.emailSent = emailStatus === 'sent';
   }
 
   if (fromDate || toDate) {
@@ -197,6 +205,40 @@ const getAdminAwards = async ({
       query.announcedAt.$lte = toDate;
     }
   }
+
+  if (searchTerm) {
+    const safeTerm = searchTerm.trim();
+    if (safeTerm) {
+      const regex = new RegExp(safeTerm, 'i');
+      query.$or = [
+        { donorName: regex },
+        { donorEmail: regex },
+        { couponCode: regex },
+        { notes: regex },
+      ];
+    }
+  }
+
+  return query;
+};
+
+const getAdminAwards = async ({
+  page = 1,
+  limit = 20,
+  fundraiserId,
+  searchTerm,
+  emailStatus,
+  fromDate,
+  toDate,
+}: IGetAwardsParams) => {
+  const skip = (page - 1) * limit;
+  const query = buildAwardsQuery({
+    fundraiserId,
+    searchTerm,
+    emailStatus,
+    fromDate,
+    toDate,
+  });
 
   const [awards, total] = await Promise.all([
     populateAward(
@@ -336,10 +378,48 @@ const selectWeightedWinner = async (fundraiserId: string) => {
   };
 };
 
+const deleteAwardById = async (awardId: string) => {
+  const award = await Award.findByIdAndDelete(awardId);
+
+  if (!award) {
+    throw new AppError(StatusCodes.NOT_FOUND, 'Award not found');
+  }
+
+  return award;
+};
+
+const bulkDeleteAwards = async ({
+  awardIds,
+  filters,
+}: {
+  awardIds?: string[];
+  filters?: IAwardQueryFilters;
+}) => {
+  let query: FilterQuery<IAward> | null = null;
+
+  if (awardIds?.length) {
+    query = { _id: { $in: awardIds } };
+  } else if (filters) {
+    query = buildAwardsQuery(filters);
+  }
+
+  if (!query) {
+    throw new AppError(
+      StatusCodes.BAD_REQUEST,
+      'Provide awardIds or filters to bulk delete awards'
+    );
+  }
+
+  const result = await Award.deleteMany(query);
+  return result.deletedCount || 0;
+};
+
 export const AwardService = {
   announceAward,
   getAdminAwards,
   getAwardById,
   getFundraiserDonorsForAward,
   selectWeightedWinner,
+  deleteAwardById,
+  bulkDeleteAwards,
 };

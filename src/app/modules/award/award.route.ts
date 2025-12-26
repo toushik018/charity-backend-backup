@@ -19,6 +19,8 @@ import { validateRequest } from '../../middlewares/validateRequest';
 import { AwardController } from './award.controller';
 import {
   announceAwardValidation,
+  bulkDeleteAwardsValidation,
+  deleteAwardValidation,
   getAdminAwardsQueryValidation,
   getAwardByIdValidation,
   getFundraiserDonorsValidation,
@@ -85,6 +87,30 @@ router.get(
   auth('admin'),
   validateRequest(getAwardByIdValidation),
   AwardController.getAwardById
+);
+
+/**
+ * @route DELETE /api/awards/admin/:awardId
+ * @desc Delete a specific award by ID
+ * @access Admin only
+ */
+router.delete(
+  '/admin/:awardId',
+  auth('admin'),
+  validateRequest(deleteAwardValidation),
+  AwardController.deleteAward
+);
+
+/**
+ * @route POST /api/awards/admin/bulk-delete
+ * @desc Bulk delete awards by ids or filters
+ * @access Admin only
+ */
+router.post(
+  '/admin/bulk-delete',
+  auth('admin'),
+  validateRequest(bulkDeleteAwardsValidation),
+  AwardController.bulkDeleteAwards
 );
 
 export const AwardRoute = router;
