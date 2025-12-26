@@ -80,8 +80,52 @@ const getAwardById = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+/**
+ * Gets donors for a specific fundraiser with weighted probability data.
+ *
+ * Returns all active coupons for the fundraiser with calculated
+ * win probability based on donation amount.
+ *
+ * @route GET /api/awards/admin/fundraiser/:fundraiserId/donors
+ */
+const getFundraiserDonors = catchAsync(async (req: Request, res: Response) => {
+  const { fundraiserId } = req.params as { fundraiserId: string };
+
+  const result = await AwardService.getFundraiserDonorsForAward(fundraiserId);
+
+  return sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Fundraiser donors retrieved successfully',
+    data: result,
+  });
+});
+
+/**
+ * Selects a weighted random winner from a fundraiser's donors.
+ *
+ * Uses weighted probability based on donation amount.
+ * Higher donations have proportionally higher chance of winning.
+ *
+ * @route POST /api/awards/admin/fundraiser/:fundraiserId/select-winner
+ */
+const selectWeightedWinner = catchAsync(async (req: Request, res: Response) => {
+  const { fundraiserId } = req.params as { fundraiserId: string };
+
+  const result = await AwardService.selectWeightedWinner(fundraiserId);
+
+  return sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Winner selected successfully',
+    data: result,
+  });
+});
+
 export const AwardController = {
   announceAward,
   getAdminAwards,
   getAwardById,
+  getFundraiserDonors,
+  selectWeightedWinner,
 };

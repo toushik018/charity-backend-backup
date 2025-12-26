@@ -40,3 +40,29 @@ export const getAwardByIdValidation = z.object({
     }),
   }),
 });
+
+/**
+ * Validation for fundraiser donors endpoint.
+ * Requires a valid fundraiserId in params.
+ */
+export const getFundraiserDonorsValidation = z.object({
+  params: z.object({
+    fundraiserId: zObjectId({
+      requiredError: 'fundraiserId is required',
+      invalidMessage: 'fundraiserId must be a valid ObjectId',
+    }),
+  }),
+});
+
+/**
+ * Validation for weighted winner selection endpoint.
+ * Requires a valid fundraiserId in params.
+ */
+export const selectWeightedWinnerValidation = z.object({
+  params: z.object({
+    fundraiserId: zObjectId({
+      requiredError: 'fundraiserId is required',
+      invalidMessage: 'fundraiserId must be a valid ObjectId',
+    }),
+  }),
+});

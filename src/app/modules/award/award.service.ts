@@ -226,8 +226,120 @@ const getAwardById = async (awardId: string) => {
   return award;
 };
 
+/**
+ * Retrieves donors for a specific fundraiser with weighted probability data.
+ *
+ * Each donor's win probability is proportional to their total donation amount.
+ * Only considers completed donations with active coupons.
+ *
+ * @param {string} fundraiserId - The fundraiser ID to get donors for
+ * @returns {Promise<Object>} Fundraiser info and weighted donors list
+ */
+const getFundraiserDonorsForAward = async (fundraiserId: string) => {
+  // Get all active coupons for this fundraiser
+  const coupons = await Coupon.find({
+    fundraiser: fundraiserId,
+    status: 'active',
+    expiresAt: { $gt: new Date() },
+  })
+    .populate('donation', 'amount totalAmount currency createdAt paymentStatus')
+    .populate('user', 'name email profilePicture')
+    .populate(
+      'fundraiser',
+      'title slug coverImage goalAmount currentAmount donationCount'
+    )
+    .lean();
+
+  if (coupons.length === 0) {
+    return {
+      fundraiser: null,
+      donors: [],
+      totalAmount: 0,
+      totalCoupons: 0,
+    };
+  }
+
+  // Calculate total donation amount for probability weighting
+  const totalAmount = coupons.reduce(
+    (sum, coupon) => sum + (coupon.donationAmount || 0),
+    0
+  );
+
+  // Build weighted donors list
+  const donors = coupons.map((coupon) => {
+    const amount = coupon.donationAmount || 0;
+    const probability = totalAmount > 0 ? (amount / totalAmount) * 100 : 0;
+
+    return {
+      couponId: coupon._id,
+      couponCode: coupon.code,
+      donorName: coupon.donorName,
+      donorEmail: coupon.donorEmail,
+      donationAmount: amount,
+      currency: coupon.currency,
+      probability: Math.round(probability * 100) / 100, // Round to 2 decimal places
+      user: coupon.user,
+      donation: coupon.donation,
+      createdAt: coupon.createdAt,
+    };
+  });
+
+  // Sort by probability (highest first)
+  donors.sort((a, b) => b.probability - a.probability);
+
+  return {
+    fundraiser: coupons[0]?.fundraiser || null,
+    donors,
+    totalAmount,
+    totalCoupons: coupons.length,
+  };
+};
+
+/**
+ * Selects a random winner from fundraiser donors using weighted probability.
+ *
+ * The probability of winning is proportional to the donation amount.
+ * Uses a weighted random selection algorithm.
+ *
+ * @param {string} fundraiserId - The fundraiser ID to select winner from
+ * @returns {Promise<Object>} Selected winner coupon data
+ */
+const selectWeightedWinner = async (fundraiserId: string) => {
+  const { donors, totalAmount, fundraiser } =
+    await getFundraiserDonorsForAward(fundraiserId);
+
+  if (donors.length === 0) {
+    throw new AppError(
+      StatusCodes.NOT_FOUND,
+      'No eligible donors found for this fundraiser'
+    );
+  }
+
+  // Weighted random selection
+  const random = Math.random() * totalAmount;
+  let cumulative = 0;
+  let selectedDonor = donors[0];
+
+  for (const donor of donors) {
+    cumulative += donor.donationAmount;
+    if (random <= cumulative) {
+      selectedDonor = donor;
+      break;
+    }
+  }
+
+  return {
+    winner: selectedDonor,
+    fundraiser,
+    totalDonors: donors.length,
+    totalAmount,
+  };
+};
+
 export const AwardService = {
   announceAward,
   getAdminAwards,
   getAwardById,
+  getFundraiserDonorsForAward,
+  selectWeightedWinner,
 };
